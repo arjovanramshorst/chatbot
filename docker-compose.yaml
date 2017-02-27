@@ -1,0 +1,99 @@
+version: '2'
+services:
+  requester:
+    build:
+      context: ./requester
+      dockerfile: ./deploy/requester.docker
+    ports:
+      - "33333:80"
+    volumes:
+      - ./requester:/var/www
+    links:
+      - mysql:mysql
+  worker:
+    build:
+      context: ./worker
+      dockerfile: ./deploy/worker.docker
+    volumes:
+      - ./worker:/var/www
+    links:
+      - mysql:mysql
+  mysql:
+    image: mysql:5.7
+    ports:
+      - "33334:3306"
+    volumes:
+      - ./docker/db/data:/var/lib/mysql
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_USER: requester
+      MYSQL_PASSWORD: requester
+      MYSQL_DATABASE: requester
+  phpmyadmin:
+    image: phpmyadmin/phpmyadmin
+    environment:
+      - PMA_HOST=mysql
+      - PMA_USER=root
+      - PMA_PASSWORD=root
+    links:
+      - mysql:mysql
+    ports:
+      - "33337:80"
+#web:
+#  build: ./docker/web
+#  expose:
+#    - "9000"
+#  ports:
+#    - "33333:80"
+#  volumes:
+#    - .:/var/www/flexentral
+#    - ./docker/apache/sites-enabled:/etc/apache2/sites-enabled
+#  links:
+#    - mysql:mysql
+#    - redis
+#  environment:
+##    XDEBUG_CONFIG: "remote_host=172.17.0.1:33333"
+#    PHP_IDE_CONFIG: "serverName=localhost"
+#    REDIS_PORT: 6379
+#    REDIS_HOST: redis
+##queue:
+##  build: ./docker/web
+##  volumes:
+##    - .:/var/www/flexentral
+##    - ./docker/apache/supervisor:/etc/supervisor/conf.d/
+##    - ./docker/logs:/var/log/supervisor
+##  command: /usr/bin/supervisord -n
+##  links:
+##    - mysql:mysql
+#mysql:
+#  image: mysql:5.7
+#  ports:
+#    - "33334:3306"
+#  volumes:
+#    - ./docker/db/data:/var/lib/mysql
+#  environment:
+#    MYSQL_ROOT_PASSWORD: root
+#    MYSQL_USER: flexentral
+#    MYSQL_PASSWORD: flexentral
+#    MYSQL_DATABASE: flexentral
+#dev:
+#  build: ./docker/dev
+#  volumes:
+#    - .:/var/flexentral
+#  ports:
+#    - "33335:33335"
+#    - "33336:35729"
+#css:
+#  build: ./docker/dev
+#  volumes:
+#    - .:/var/flexentral
+#  command: node node_modules/gulp/bin/gulp.js watch
+#  links:
+#    - web:web
+#    - dev:dev
+#  ports:
+#    - "3000:3000"
+#redis:
+#  image: redis:3.0-alpine
+#  ports:
+#    - "33338:6379"
