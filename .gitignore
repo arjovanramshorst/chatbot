@@ -8,3 +8,6 @@
 /worker/public/storage
 /worker/public/hot
 /worker/storage/*.key
+/worker/npm-debug.log
+/requester/npm-debug.log
+/data
