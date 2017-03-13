@@ -5,40 +5,28 @@ services:
       context: ./requester
       dockerfile: ./deploy/requester.docker
     ports:
-      - "33333:80"
+      - "3333:80"
     volumes:
       - ./requester:/var/www
     links:
-      - mysql:mysql
+      - db:db
   worker:
     build:
       context: ./worker
       dockerfile: ./deploy/worker.docker
     volumes:
       - ./worker:/var/www
-    links:
-      - mysql:mysql
-  mysql:
-    image: mysql:5.7
     ports:
-      - "33334:3306"
+      - "2222:80"
+    links:
+      - db:db
+  db:
+    image: bitnami/mongodb:latest
     volumes:
-      - ./docker/db/data:/var/lib/mysql
-    environment:
-      MYSQL_ROOT_PASSWORD: root
-      MYSQL_USER: requester
-      MYSQL_PASSWORD: requester
-      MYSQL_DATABASE: requester
-  phpmyadmin:
-    image: phpmyadmin/phpmyadmin
-    environment:
-      - PMA_HOST=mysql
-      - PMA_USER=root
-      - PMA_PASSWORD=root
-    links:
-      - mysql:mysql
+      - ./data:/bitnami/mongodb
     ports:
-      - "33337:80"
+      - "4444:27017"
+
 #web:
 #  build: ./docker/web
 #  expose:
