@@ -16,16 +16,19 @@ app.use(morgan('dev')); // log requests to the console
 app.use(bodyParser.urlencoded({ extended: true }));
 app.use(bodyParser.json());
 
-var port     = /*process.env.PORT || */ 3333; // set port
+// set port
+var port     = /*process.env.PORT || */ 3333;
 
+// connect to mongodb
 var mongoose   = require('mongoose');
 mongoose.connect('mongodb://localhost:4444'); // connect to database
 var Task     = require('./app/models/task');
 
+// verify connection to mongodb
 var conn = mongoose.connection;
 conn.on('error', console.error.bind(console, 'connection error:'));
 conn.once('open', function() {
-  console.log('Connected successfully')
+  console.log('Connected successfully to MongoDB')
 });
 
 // API ROUTES
@@ -46,14 +49,6 @@ router.get('/', function(req, res) {
 	res.json({ message: 'Welcome, requester!' });
 });
 
-router.get('/alltasks', function(req, res) {
-	Task.find({}, function(err, tasks) {
-		if (err)
-			res.send(err)
-		res.json({ taskarray: tasks });
-	});
-});
-
 router.get('/test-insert', function(req, res) {
 	var task = new Task();		// create a new instance of the Task model
 	task.name = 'Test task';  // set the tasks name
@@ -62,6 +57,16 @@ router.get('/test-insert', function(req, res) {
 			res.send(err);
 		else
 			res.json({ message: 'Task inserted!', task: task });
+	});
+});
+
+// get all tasks route
+router.get('/alltasks', function(req, res) {
+	Task.find({}, function(err, tasks	) {
+		if (err)
+			res.send(err)
+			
+		res.json({ taskarray: tasks });
 	});
 });
 
