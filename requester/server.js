@@ -16,11 +16,13 @@ app.use(morgan('dev')); // log requests to the console
 app.use(bodyParser.urlencoded({ extended: true }));
 app.use(bodyParser.json());
 
-var port     = process.env.PORT || 3333; // set port
+var port     = /*process.env.PORT || */ 3333; // set port
 
 var mongoose   = require('mongoose');
 mongoose.connect('mongodb://localhost:4444'); // connect to database
 var Task     = require('./app/models/task');
+
+var conn = mongoose.connection;
 
 // API ROUTES
 // =============================================================================
@@ -38,6 +40,17 @@ router.use(function(req, res, next) {
 // test route
 router.get('/', function(req, res) {
 	res.json({ message: 'Welcome, requester!' });
+});
+
+router.get('/test-insert', function(req, res) {
+	var task = new Task();		// create a new instance of the Task model
+	task.name = 'Test task';  // set the tasks name
+	task.save(function(err) { // save the task
+		if (err)
+			res.send(err);
+
+		res.json({ message: 'Task inserted!', task: task });
+	});
 });
 
 // task routes
@@ -115,7 +128,7 @@ router.route('/tasks/:task_id')
 
 
 // REGISTER ROUTES -------------------------------
-app.use('/requester', router);
+app.use('/api', router);
 
 // START THE SERVER
 // =============================================================================
