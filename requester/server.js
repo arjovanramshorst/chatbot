@@ -23,6 +23,10 @@ mongoose.connect('mongodb://localhost:4444'); // connect to database
 var Task     = require('./app/models/task');
 
 var conn = mongoose.connection;
+conn.on('error', console.error.bind(console, 'connection error:'));
+conn.once('open', function() {
+  console.log('Connected successfully')
+});
 
 // API ROUTES
 // =============================================================================
@@ -42,14 +46,22 @@ router.get('/', function(req, res) {
 	res.json({ message: 'Welcome, requester!' });
 });
 
+router.get('/alltasks', function(req, res) {
+	Task.find({}, function(err, tasks) {
+		if (err)
+			res.send(err)
+		res.json({ taskarray: tasks });
+	});
+});
+
 router.get('/test-insert', function(req, res) {
 	var task = new Task();		// create a new instance of the Task model
 	task.name = 'Test task';  // set the tasks name
 	task.save(function(err) { // save the task
 		if (err)
 			res.send(err);
-
-		res.json({ message: 'Task inserted!', task: task });
+		else
+			res.json({ message: 'Task inserted!', task: task });
 	});
 });
 
