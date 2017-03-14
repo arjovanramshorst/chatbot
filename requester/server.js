@@ -19,7 +19,7 @@ app.use(bodyParser.json());
 var port     = process.env.PORT || 3333; // set port
 
 var mongoose   = require('mongoose');
-mongoose.connect('mongodb://node:node@novus.modulusmongo.net:27017/Iganiq8o'); // connect to database
+mongoose.connect('mongodb://localhost:4444'); // connect to database
 var Task     = require('./app/models/task');
 
 // API ROUTES
