@@ -1,24 +1,22 @@
-// call the packages we need
 var express = require('express');
 var bodyParser = require('body-parser');
-var app = express();
 var morgan = require('morgan');
+
+var app = express();
 
 /**
  * Configure Application
  */
-// log requests to the console
 app.use(morgan('dev'));
-// configure body parser
 app.use(bodyParser.urlencoded({
     extended: true
 }));
 app.use(bodyParser.json());
-// set port
-var port = 3333;
+
 // connect to mongodb
 var mongoose = require('mongoose');
-mongoose.connect('mongodb://localhost:4444'); // connect to database
+mongoose.connect('mongodb://localhost:4444');
+
 // verify connection to mongodb
 var conn = mongoose.connection;
 conn.on('error', console.error.bind(console, 'connection error:'));
@@ -38,5 +36,6 @@ app.use('/api/tasks', taskRoutes);
 /**
  * Start server
  */
+var port = 3333;
 app.listen(port);
 console.log('Requester API started at ' + port);
