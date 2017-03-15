@@ -49,6 +49,7 @@ router.get('/', function(req, res) {
 	res.json({ message: 'Welcome, requester!' });
 });
 
+// insert an empty test task
 router.get('/test-insert', function(req, res) {
 	var task = new Task();		// create a new instance of the Task model
 
@@ -62,16 +63,6 @@ router.get('/test-insert', function(req, res) {
 			res.send(err);
     else
       res.json({ message: 'Task inserted!', task: task });
-	});
-});
-
-// get all tasks route
-router.get('/alltasks', function(req, res) {
-	Task.find({}, function(err, tasks	) {
-		if (err)
-			res.send(err)
-
-		res.json({ taskarray: tasks });
 	});
 });
 
@@ -91,18 +82,16 @@ router.route('/tasks')
 
 			res.json({ message: 'Task created!' });
 		});
-
-
 	})
 
 	// get all the tasks
 	.get(function(req, res) {
-		Task.find(function(err, tasks) {
-			if (err)
-				res.send(err);
+    Task.find({}, function(err, tasks	) {
+  		if (err)
+  			res.send(err)
 
-			res.json(tasks);
-		});
+  		res.json({ taskarray: tasks });
+  	});
 	});
 
 // on routes that end in /tasks/:task_id
