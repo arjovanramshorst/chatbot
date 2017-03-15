@@ -51,12 +51,17 @@ router.get('/', function(req, res) {
 
 router.get('/test-insert', function(req, res) {
 	var task = new Task();		// create a new instance of the Task model
-	task.name = 'Test task';  // set the tasks name
+
+	task.name = 'TESTS';  // set the tasks name
+  task.requester_id = 1;
+  task.sources = [];
+  task.questions = [];
+
 	task.save(function(err) { // save the task
 		if (err)
 			res.send(err);
-		else
-			res.json({ message: 'Task inserted!', task: task });
+    else
+      res.json({ message: 'Task inserted!', task: task });
 	});
 });
 
@@ -65,7 +70,7 @@ router.get('/alltasks', function(req, res) {
 	Task.find({}, function(err, tasks	) {
 		if (err)
 			res.send(err)
-			
+
 		res.json({ taskarray: tasks });
 	});
 });
