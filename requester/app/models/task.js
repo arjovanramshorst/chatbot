@@ -3,11 +3,15 @@ var Schema       = mongoose.Schema;
 
 var TaskSchema   = new Schema({
 	name: String,
-	requester_id: Number,
+	requester_id: String,
+	solution_limit: Number, // A requester pays for a limited amount of responses
 	sources: [{
-		source_id : Number,
-		parameters: { } // e.g. hashtags [],
+		source_id : String,	// e.g. instagram id / twitter id from Source schema
+		parameters: { } // e.g. hashtags [], users etc.
 	}],
+	// solutions: [ // Unnecessary? maybe better in solutions Schema.
+	// 	Number, // All the solutions submitted by workers
+	// ],
 	questions: [{
 		question: String,
 		response_type: String,

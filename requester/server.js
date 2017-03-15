@@ -23,6 +23,7 @@ var port     = /*process.env.PORT || */ 3333;
 var mongoose   = require('mongoose');
 mongoose.connect('mongodb://localhost:4444'); // connect to database
 var Task     = require('./app/models/task');
+var Solution     = require('./app/models/solution');
 
 // verify connection to mongodb
 var conn = mongoose.connection;
@@ -65,6 +66,21 @@ router.get('/test-insert', function(req, res) {
 	});
 });
 
+router.get('/test-insert-solution', function(req, res) {
+	var solution = new Solution();
+
+  solution.task_id = 'randomidfortask';
+  solution.worker_id = 'randomidforworker';
+  solution.responses = [];
+
+	solution.save(function(err) { // save the solution
+		if (err)
+			res.send(err);
+    else
+      res.json({ message: 'Solution inserted!', solution: solution });
+	});
+});
+
 // get all tasks route
 router.get('/alltasks', function(req, res) {
 	Task.find({}, function(err, tasks	) {
@@ -72,6 +88,16 @@ router.get('/alltasks', function(req, res) {
 			res.send(err)
 
 		res.json({ taskarray: tasks });
+	});
+});
+
+// get all solution route
+router.get('/all-solutions', function(req, res) {
+	Solution.find({}, function(err, solutions	) {
+		if (err)
+			res.send(err)
+
+		res.json({ solution_array: solutions });
 	});
 });
 
