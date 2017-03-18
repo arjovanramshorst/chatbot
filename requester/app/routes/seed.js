@@ -6,11 +6,11 @@ var router = express.Router();
 
 // Reset the entire tasks collection and seed some new data
 router.get('/reset-and-seed', function(req, res) {
-    removeAllTasks()
+    removeAllTasks();
     addSingleTask(res)
 });
 
-const removeAllTasks = () => {
+var removeAllTasks = () => {
     // First remove all the current ones.
     Task.remove({}, function(err, task) {
         if (err)
@@ -18,7 +18,7 @@ const removeAllTasks = () => {
     });
 }
 
-const addSingleTask = (res) => {
+var addSingleTask = (res) => {
     var task = new Task();
     task.name = 'Some Test task';
     task.requester_id = 'whateveridfromsomerequesterinstring';
@@ -45,10 +45,10 @@ const addSingleTask = (res) => {
     ];
 
     image_urls = [
-        "http://www.bountifulutah.gov/file/828a35ca-9cb8-447c-9f55-c6973e3d981f",
-        "https://www.cs.princeton.edu/~xinyi/images/GoogleLogo.png",
-        "https://image.freepik.com/iconen-gratis/apple-logo_318-40184.jpg",
-    ]
+        "https://upload.wikimedia.org/wikipedia/commons/0/0b/ReceiptSwiss.jpg",
+        "http://www.makereceipts.com/receipt_preview.jpg",
+        "https://stilgherrian.com/wp-content/uploads/2011/01/cabcharge-receipt-20110105-500w.jpg"
+    ];
 
     for (var i = 0; i < 3; i++) {
         var unit = new Unit();
