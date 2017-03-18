@@ -44,7 +44,7 @@ router.get('/reset-and-seed', function(req, res) {
     var task = new Task();
     task.name = 'Some Test task';
     task.requester_id = 'whateveridfromsomerequesterinstring';
-    task.sources = [{
+    task.external_sources = [{
         source_id: 'someidoftwitterofinstagram',
         parameters: {
             hastags: ['receipt', 'restaurant', 'delft'],
