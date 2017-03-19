@@ -13,6 +13,6 @@
     "express": "~4.0.0",
     "mongoose": "~4.6.8",
     "morgan": "~1.0.0",
-    "twitter-js-client": "0.0.5"
+    "twitter-node-client": "0.0.6"
   }
 }
