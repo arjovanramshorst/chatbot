@@ -5,7 +5,17 @@ var Unit = require('../models/unit');
 var router = express.Router();
 
 router.route('/')
+    // get all the tasks
+    .get(function(req, res) {
+        Task.find({}, function(err, tasks) {
+            if (err)
+                res.send(err)
 
+            res.json({
+                taskarray: tasks
+            });
+        });
+    })
     // create a task
     .post(function(req, res) {
 
@@ -18,18 +28,6 @@ router.route('/')
 
             res.json({
                 message: 'Task created!'
-            });
-        });
-    })
-
-    // get all the tasks
-    .get(function(req, res) {
-        Task.find({}, function(err, tasks) {
-            if (err)
-                res.send(err)
-
-            res.json({
-                taskarray: tasks
             });
         });
     });
@@ -48,10 +46,8 @@ router.route('/:task_id')
                     if (err)
                         res.send(err)
                     res.json({
-                        'complete_task': {
-                            task,
-                            'units': units
-                        }
+                        'task': task,
+                        'units': units
                     });
                 });
             }
@@ -92,7 +88,7 @@ router.route('/:task_id')
 
 // Task specific operations like details, update, delete
 router.route('/:task_id/units')
-    // get the task by id
+    // Get all the task its task units by task id
     .get(function(req, res) {
         Task.findById(req.params.task_id, function(err, task) {
             if (err) {
@@ -108,6 +104,27 @@ router.route('/:task_id/units')
             }
         });
     })
+    // Create a unit, add it to a task by task id
+    .post(function(req, res) {
+        Task.findById(req.params.task_id, function(err, task) {
+            if (err) {
+                res.send(err);
+            } else {
+                var unit = new Unit();
+                unit.task_id = req.params.task_id;
+                unit.content = req.body.content;
+
+                unit.save(function(err) {
+                    if (err)
+                        res.send(err);
+
+                    res.json({
+                        message: 'Unit created and added to task!'
+                    });
+                });
+            }
+        });
+    });
 
 
 module.exports = router;
