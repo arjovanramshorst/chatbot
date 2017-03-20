@@ -12,7 +12,7 @@ router.get('/reset-and-seed', function(req, res) {
 
 var removeAllTasks = () => {
     // First remove all the current ones.
-    Task.remove({}, function(err, task) {
+    Task.remove({}, function(err) {
         if (err)
             res.send(err);
     });

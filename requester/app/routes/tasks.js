@@ -48,8 +48,10 @@ router.route('/:task_id')
                     if (err)
                         res.send(err)
                     res.json({
-                        'task': task,
-                        'units': units
+                        'complete_task': {
+                            task,
+                            'units': units
+                        }
                     });
                 });
             }
