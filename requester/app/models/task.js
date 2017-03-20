@@ -10,10 +10,10 @@ var TaskSchema = new Schema({
     name: String,
     requester_id: String,
     solution_limit: Number, // A requester pays for a limited amount of responses
-    external_sources: [{
-        source_id: String,
-        parameters: {} // e.g. hashtags [], users etc.
-    }],
+    content_definition: {
+        content_type: String, // IMAGE / TWEET
+        content_fields: Object // e.g. unit.content.image_url
+    },
     questions: [{
         question: String,
         response_type: String,

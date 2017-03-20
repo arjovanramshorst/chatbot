@@ -22,13 +22,11 @@ var addSingleTask = (res) => {
     var task = new Task();
     task.name = 'Some Test task';
     task.requester_id = 'whateveridfromsomerequesterinstring';
-    task.external_sources = [{
-        source_id: 'someidoftwitterofinstagram',
-        parameters: {
-            hastags: ['receipt', 'restaurant', 'delft'],
-            hastag_separator: 'AND',
-        }
-    }];
+    task.content_definition.content_type = 'IMAGE_LIST';
+    task.content_definition.content_fields = {
+        'image_1': 'content.image_url_first',
+        'image_2': 'content.image_url_second'
+    }
     task.questions = [{
             question: 'Does the image show a readable receipt from a restaurant?',
             response_type: 'SELECT',
@@ -50,10 +48,13 @@ var addSingleTask = (res) => {
         "https://stilgherrian.com/wp-content/uploads/2011/01/cabcharge-receipt-20110105-500w.jpg"
     ];
 
-    for (var i = 0; i < 3; i++) {
+    for (var i = 0; i < image_urls.length; i++) {
         var unit = new Unit();
         unit.task_id = task.id;
-        unit.content.image_url = image_urls[i];
+        unit.content = {
+            'image_url_first': image_urls[i],
+            'image_url_second': image_urls[(i + 1) % 3]
+        }
         unit.save(function(err) {
             if (err)
                 res.send(err);

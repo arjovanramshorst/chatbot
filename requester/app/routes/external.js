@@ -5,7 +5,7 @@ var Unit = require('../models/unit');
 var router = express.Router();
 var Twitter = require('twitter-node-client').Twitter;
 /**
- * Twitter settings
+ * TODO Remove this: This is no longer valid.
  */
 var config = {
     "consumerKey": "Fqza8FljBeMEqUfqb7sEAKjly",
@@ -15,12 +15,14 @@ var config = {
 };
 var twitter = new Twitter(config);
 
-//post to retrieve user data
+/**
+ * TODO Remove this. This is no longer valid.
+ */
 router.get('/twitter/tweet', function(req, res) {
     var data = twitter.getSearch({
         'q': '#receipt',
         'count': 20,
-        'filter': 'media'
+        'filter': 'images'
     }, function() {
         res.status(404).send({
             "error": "No tweets found"

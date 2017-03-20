@@ -7,9 +7,7 @@ var Schema = mongoose.Schema;
  */
 var UnitSchema = new Schema({
     task_id: String, // Parent is a task.
-    content: {
-        image_url: String
-    }
+    content: Object,
 });
 
 module.exports = mongoose.model('Unit', UnitSchema);
