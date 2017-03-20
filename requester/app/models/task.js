@@ -16,8 +16,7 @@ var TaskSchema = new Schema({
     },
     questions: [{
         question: String,
-        response_type: String,
-        response_select_options: [String]
+        response_definition: Object
     }],
 });
 

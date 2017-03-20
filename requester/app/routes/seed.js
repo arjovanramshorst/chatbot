@@ -29,16 +29,25 @@ var addSingleTask = (res) => {
     }
     task.questions = [{
             question: 'Does the image show a readable receipt from a restaurant?',
-            response_type: 'SELECT',
-            response_select_options: ['yes', 'no']
+            response_definition: {
+                'response_type': 'SELECT',
+                'response_select_options': [
+                    'yes', 'no'
+                ]
+            },
         },
         {
             question: 'What is the name of the restaurant on the receipt?',
-            response_type: 'FREE_TEXT',
+            response_definition: {
+                'response_type': 'FREE_TEXT',
+                'response_length': 100
+            },
         },
         {
             question: 'What is the total amount that should be paid?',
-            response_type: 'NUMBER',
+            response_definition: {
+                'response_type': 'NUMBER',
+            },
         },
     ];
 
