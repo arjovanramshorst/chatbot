@@ -2,84 +2,36 @@ version: '2'
 services:
   requester:
     build:
-      context: ./requester
+      context: ./src
     ports:
       - "3333:80"
     volumes:
-      - ./requester:/var/www
+      - ./src:/var/www
+    command: "npm run dev-requester"
     links:
       - db:db
+    depends_on:
+      - db
   worker:
     build:
-      context: ./worker
+      context: ./src
     volumes:
-      - ./worker:/var/www
+      - ./src:/var/www
     ports:
       - "2222:80"
+    command: "npm run dev-worker"
     links:
       - db:db
   db:
-    image: bitnami/mongodb:latest
+    image: mongo:latest
     volumes:
-      - ./data:/bitnami/mongodb
+      - ./data:/data/db
     ports:
       - "4444:27017"
-
-#web:
-#  build: ./docker/web
-#  expose:
-#    - "9000"
-#  ports:
-#    - "33333:80"
-#  volumes:
-#    - .:/var/www/flexentral
-#    - ./docker/apache/sites-enabled:/etc/apache2/sites-enabled
-#  links:
-#    - mysql:mysql
-#    - redis
-#  environment:
-##    XDEBUG_CONFIG: "remote_host=172.17.0.1:33333"
-#    PHP_IDE_CONFIG: "serverName=localhost"
-#    REDIS_PORT: 6379
-#    REDIS_HOST: redis
-##queue:
-##  build: ./docker/web
-##  volumes:
-##    - .:/var/www/flexentral
-##    - ./docker/apache/supervisor:/etc/supervisor/conf.d/
-##    - ./docker/logs:/var/log/supervisor
-##  command: /usr/bin/supervisord -n
-##  links:
-##    - mysql:mysql
-#mysql:
-#  image: mysql:5.7
-#  ports:
-#    - "33334:3306"
-#  volumes:
-#    - ./docker/db/data:/var/lib/mysql
-#  environment:
-#    MYSQL_ROOT_PASSWORD: root
-#    MYSQL_USER: flexentral
-#    MYSQL_PASSWORD: flexentral
-#    MYSQL_DATABASE: flexentral
-#dev:
-#  build: ./docker/dev
-#  volumes:
-#    - .:/var/flexentral
-#  ports:
-#    - "33335:33335"
-#    - "33336:35729"
-#css:
-#  build: ./docker/dev
-#  volumes:
-#    - .:/var/flexentral
-#  command: node node_modules/gulp/bin/gulp.js watch
-#  links:
-#    - web:web
-#    - dev:dev
-#  ports:
-#    - "3000:3000"
-#redis:
-#  image: redis:3.0-alpine
-#  ports:
-#    - "33338:6379"
+  db-client:
+    image: mongo-express:latest
+    links:
+      - db:mongo
+    restart: always
+    ports:
+      - "5555:8081"
