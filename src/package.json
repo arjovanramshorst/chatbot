@@ -6,7 +6,10 @@
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
     "dev-requester": "nodemon requester/server.js",
-    "dev-worker": "nodemon worker/index.js"
+    "dev-worker": "nodemon worker/index.js",
+    "task-drive": "node task_pipelines/drive/index.js",
+    "task-insta": "node task_pipelines/instagram/index.js",
+    "task-twitter": "node task_pipelines/twitter/index.js"
   },
   "author": "",
   "license": "ISC",
