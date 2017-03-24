@@ -7,6 +7,7 @@ services:
       - "3333:80"
     volumes:
       - ./requester:/var/www
+      - ./utils:/var/utils
     links:
       - db:db
     depends_on:
@@ -16,6 +17,7 @@ services:
       context: ./worker
     volumes:
       - ./worker:/var/www
+      - ./utils:/var/utils
     ports:
       - "2222:80"
     links:
