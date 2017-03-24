@@ -12,6 +12,7 @@
   "dependencies": {
     "body-parser": "~1.0.1",
     "express": "~4.0.0",
+    "crowdsource-utils": "file:../utils",
     "mongoose": "~4.6.8",
     "morgan": "~1.0.0",
     "twitter-node-client": "0.0.6"

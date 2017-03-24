@@ -1,5 +1,5 @@
 var express = require('express');
-var Solution = require('../models/solution');
+var Solution = require('crowdsource-utils/models/solution');
 
 var router = express.Router();
 
