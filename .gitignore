@@ -2,6 +2,7 @@
 /requester/public/storage
 /requester/public/hot
 /requester/storage/*.key
+/requester/npm-debug.log
 /.idea
 
 /worker/node_modules
@@ -9,5 +10,11 @@
 /worker/public/hot
 /worker/storage/*.key
 /worker/npm-debug.log
-/requester/npm-debug.log
 /data
+
+/utils/node_modules
+/utils/public/storage
+/utils/public/hot
+/utils/storage/*.key
+/utils/npm-debug.log
+/utils/npm-debug.log
