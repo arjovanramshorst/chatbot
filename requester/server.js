@@ -15,7 +15,7 @@ app.use(bodyParser.json());
 
 // connect to mongodb
 var mongoose = require('mongoose');
-mongoose.connect('mongodb://localhost:4444');
+mongoose.connect('db');
 
 // verify connection to mongodb
 var conn = mongoose.connection;
@@ -40,6 +40,5 @@ app.use('/api/tasks', taskRoutes);
 /**
  * Start server
  */
-var port = 3333;
-app.listen(port);
-console.log('Requester API started at ' + port);
+app.listen(80);
+console.log('Requester API started');
