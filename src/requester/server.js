@@ -39,20 +39,6 @@ app.use('/api', commonRoutes);
 app.use('/api/external', externalRoutes);
 app.use('/api/tasks', taskRoutes);
 
-
-console.log('saving task...');
-const Task = require('../core/models/task')
-
-var task = new Task();
-task.name = 'test';
-
-task.save((err) => console.log(err))
-console.log('task saved?')
-Task.find({}, function(err, tasks) {
-    console.log(tasks)
-    console.log('callback called')
-
-})
 /**
  * Start server
  */
