@@ -1,6 +1,6 @@
 var express = require('express');
-var Task = require('../models/task');
-var Unit = require('../models/unit');
+var Task = require('crowdsource-utils/models/task');
+var Unit = require('crowdsource-utils/models/unit');
 
 var router = express.Router();
 var Twitter = require('twitter-node-client').Twitter;
