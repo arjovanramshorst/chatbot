@@ -1,6 +1,6 @@
 var express = require('express');
-var Task = require('crowdsource-utils/models/task');
-var Unit = require('crowdsource-utils/models/unit');
+var Task = require('../../../core/models/task');
+var Unit = require('../../../core/models/unit');
 
 var router = express.Router();
 

@@ -2,29 +2,36 @@ version: '2'
 services:
   requester:
     build:
-      context: ./requester
+      context: ./src
     ports:
       - "3333:80"
     volumes:
-      - ./requester:/var/www
-      - ./utils:/var/utils
+      - ./src:/var/www
+    command: "npm run dev-requester"
     links:
       - db:db
     depends_on:
       - db
   worker:
     build:
-      context: ./worker
+      context: ./src
     volumes:
-      - ./worker:/var/www
-      - ./utils:/var/utils
+      - ./src:/var/www
     ports:
       - "2222:80"
+    command: "npm run dev-worker"
     links:
       - db:db
   db:
-    image: bitnami/mongodb:latest
+    image: mongo:latest
     volumes:
-      - ./data:/bitnami/mongodb
+      - ./data2:/data/db
     ports:
       - "4444:27017"
+  db-client:
+    image: mongo-express:latest
+    links:
+      - db:mongo
+    restart: always
+    ports:
+      - "5555:8081"

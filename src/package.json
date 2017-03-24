@@ -5,14 +5,14 @@
   "main": "index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "dev": "nodemon server.js"
+    "dev-requester": "nodemon requester/server.js",
+    "dev-worker": "nodemon worker/server.js"
   },
   "author": "",
   "license": "ISC",
   "dependencies": {
     "body-parser": "~1.0.1",
     "express": "~4.0.0",
-    "crowdsource-utils": "file:../utils",
     "mongoose": "~4.6.8",
     "morgan": "~1.0.0",
     "twitter-node-client": "0.0.6"
