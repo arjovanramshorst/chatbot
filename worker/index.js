@@ -1,29 +1,31 @@
 var TelegramBot = require('node-telegram-bot-api');
 
+// import tasks
+var imageIdentification = require('./tasks/image-identification.js');
+
 // replace the value below with the Telegram token you receive from @BotFather
 var token = '295147674:AAERxZjce89nISZpVfBMbyJDK6FIHE8u1Zw';
 
 // Create a bot that uses 'polling' to fetch new updates
 var bot = new TelegramBot(token, {polling: true});
 
-// Matches "/echo [whatever]"
-bot.onText(/\/echo (.+)/, (msg, match) => {
-  // 'msg' is the received Message from Telegram
-  // 'match' is the result of executing the regexp above on the text content
-  // of the message
-
-  var chatId = msg.chat.id;
-  var resp = match[1]; // the captured "whatever"
-
-  // send back the matched "whatever" to the chat
-  bot.sendMessage(chatId, resp);
+// Matches /start
+bot.onText(/\/start/, function (msg) {
+  bot.sendMessage(msg.chat.id, 'Hi, I\'m Buck-A-Bot! Do you want to do a task with me? (possible answers: Yes, No)');
 });
 
-// Listen for any kind of message. There are different kinds of
-// messages.
-bot.on('message', (msg) => {
-  var chatId = msg.chat.id;
+// Gives the worker a task
+bot.onText(/\Yes(.*)|yes(.*)/, function (msg) {
+  imageIdentification(bot, msg);
+});
 
-  // send a message to the chat acknowledging receipt of their message
-  bot.sendMessage(chatId, 'Received your message');
+bot.onText(/\/answer (.+)/, (msg, match) => {
+  const chatId = msg.chat.id;
+  const ans = match[1];
+  bot.sendMessage(chatId, 'Your answer "' + ans + '" has been recorded. Want to do another task? (possible answers: Yes, No)');
+});
+
+// If the worker wants no task
+bot.onText(/\No(.*)|no(.*)/, function (msg) {
+  bot.sendMessage(msg.chat.id, 'Oke, better next time!');
 });
