@@ -28,25 +28,8 @@ var token = '334665274:AAHal-GI-g_Os4OiSOQ04D7h1pUY_98Slgo';
 var bot = new TelegramBot(token, { polling: true });
 
 var stateTracker = {};
+var lastText = {};
 
-// Matches "/echo [whatever]" 
-bot.onText(/\/echo (.+)/, function (msg, match) {
-  // 'msg' is the received Message from Telegram 
-  // 'match' is the result of executing the regexp above on the text content 
-  // of the message 
- 
-  var chatId = msg.chat.id;
-  var resp = match[1]; // the captured "whatever" 
- 
-  // send back the matched "whatever" to the chat 
-  bot.sendMessage(chatId, resp);
-});
-
-// // Matches /start
-// bot.onText(/\/start/, function (msg) {
-//   bot.sendMessage(msg.chat.id, 'Hi, I\'m Bucky! Do you want to do a task with me? (possible answers: Yes, No)');
-// });
- 
 // Listen for any kind of message. There are different kinds of 
 // messages. 
 bot.on('message', function (msg) {
@@ -60,10 +43,6 @@ bot.on('message', function (msg) {
 
   console.log("\nState for " + chatId + " is: " + stateTracker[chatId]);
 
-  runStateCode(chatId, msg);
-
-   
-
   // send received message to RASA-NLU to identify the intent
   request.post(
     'http://localhost:5000/parse', { json: { q: msg.text } }, function (error, response, body) {
@@ -71,17 +50,91 @@ bot.on('message', function (msg) {
         console.log(error);
       }
       if (!error && response.statusCode == 200 && body !== undefined) {
-        // Log the response from RASA NLU to the console
-        console.log("Text: " + msg.text);
-        console.log("Intent: " + body.intent);
-        console.log("Confidence: " + body.confidence);
+        // save the result of the analysis according to chatId
+        var result = {
+          text: msg.text,
+          intent: body.intent,
+          confidence: body.confidence
+        };
+        lastText[chatId] = result;
+
+        runStateCode(chatId, msg);   
+      } else {
+        console.log("Something went wrong with the analysis by the RASA-NLU. The text was: " + msg.text);
+        runStateCode(chatId, msg);   
       }
    });
 });
 
+// function that process any unknown response
+var process_other_input = function(chatId) {
+  console.log("Unknown answer by user.");
+
+  var analysedText = lastText[chatId];
+  var state = stateTracker[chatId];
+
+  switch (state) {
+    case 'greet_pending':
+    case 'new_pending':
+      if (analysedText. confidence > 0.5) {
+        switch (analysedText.intent) {
+        case 'task_request':
+          msg = {
+            text: 'Yes'
+          };
+          runStateCode(chatId, msg);
+          break;
+        case 'goodbye':
+          msg = {
+            text: 'No'
+          };
+          runStateCode(chatId, msg);
+          break;
+        default:
+          bot.sendMessage(chatId, "I am not sure what you mean. Please reply using the following options:", {
+            reply_markup: JSON.stringify({
+              one_time_keyboard: true,
+              keyboard: [
+                ['Yes'],
+                ['No']
+              ]
+            })
+          });
+        }
+      } else {
+        bot.sendMessage(chatId, "I am not sure what you mean. Please reply using the following options:", {
+          reply_markup: JSON.stringify({
+            one_time_keyboard: true,
+            keyboard: [
+              ['Yes'],
+              ['No']
+            ]
+          })
+        });
+      }
+      break;
+    case 'goodbye':
+      break;
+    case 'task_choice_pending':
+      break;
+    case 'task_info':
+      break;
+    case 'task_process_pending':
+      break;
+    case 'task_completion_pending':
+      break;
+    case 'task_completion':
+      break;
+    default:
+      console.log('x');
+  }
+};
+
 // processes the state
 var runStateCode = function(chatId, msg) {
-  switch(stateTracker[chatId]) {
+  console.log(lastText[chatId]);
+
+  switch (stateTracker[chatId]) {
     case 'new':
       bot.sendMessage(chatId, "Hi there! I am Bucky and we could work together to finish some much needed work. Would you like to do a task to earn an extra buck?", {
         reply_markup: JSON.stringify({
@@ -101,7 +154,7 @@ var runStateCode = function(chatId, msg) {
         // switch to task_choice state
         stateTracker[chatId] = 'task_choice_pending'
 
-        bot.sendMessage(chatId, "Great! What type of task would you like to do?", {
+        bot.sendMessage(chatId, "What type of task would you like to do?", {
           reply_markup: JSON.stringify({
             one_time_keyboard: true,
             keyboard: [
@@ -117,8 +170,7 @@ var runStateCode = function(chatId, msg) {
         stateTracker[chatId] = 'goodbye';
         bot.sendMessage(chatId, "Thanks for the effort. Hope to see you soon!");
       } else {
-        console.log(msg.text);
-        console.log("Unknown answer by user.")
+        process_other_input(chatId);
       }
       break;
     case 'goodbye':
