@@ -1,59 +1,21 @@
 [
   {
+    "entities": [
+      {
+        "start": 0, 
+        "end": 6, 
+        "value": "Waarom", 
+        "entity": "type"
+      }
+    ], 
+    "confidence": 0.22011244721241136, 
+    "intent": "task_completion", 
+    "text": "Waarom?"
+  }, 
+  {
     "entities": [], 
-    "confidence": 0.6897275475393242, 
+    "confidence": 0.2370450918251202, 
     "intent": "greet", 
-    "text": "hi there"
-  }, 
-  {
-    "entities": [], 
-    "confidence": 0.7504056113703672, 
-    "intent": "greet", 
-    "text": "hi"
-  }, 
-  {
-    "entities": [
-      {
-        "start": 7, 
-        "end": 14, 
-        "value": "chinese", 
-        "entity": "cuisine"
-      }
-    ], 
-    "confidence": 0.2548992604651085, 
-    "intent": "restaurant_search", 
-    "text": "i want chinese"
-  }, 
-  {
-    "entities": [], 
-    "confidence": 0.27827760357427833, 
-    "intent": "restaurant_search", 
-    "text": "i would like to eat something"
-  }, 
-  {
-    "entities": [
-      {
-        "start": 7, 
-        "end": 14, 
-        "value": "chinese", 
-        "entity": "cuisine"
-      }
-    ], 
-    "confidence": 0.29875411980655586, 
-    "intent": "restaurant_search", 
-    "text": "i want chinese food"
-  }, 
-  {
-    "entities": [
-      {
-        "start": 11, 
-        "end": 18, 
-        "value": "chinese", 
-        "entity": "cuisine"
-      }
-    ], 
-    "confidence": 0.5266328394071679, 
-    "intent": "restaurant_search", 
-    "text": "where is a chinese restaurant"
+    "text": "Hoe?"
   }
 ]
