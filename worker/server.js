@@ -30,22 +30,30 @@ var bot = new TelegramBot(token, { polling: true });
 var stateTracker = {};
 var lastText = {};
 
+var commands = [  '/begin',
+                  '/quit',
+                  '/choosetask',
+                  '/help'
+                ];
+
 // Listen for any kind of message. There are different kinds of 
 // messages. 
 bot.on('message', function (msg) {
-  var chatId = msg.chat.id;
+  if (commands.indexOf(msg.text) === -1) {
+    console.log("not entering commands")
 
-  // add chatId to statetracker
-  if (stateTracker[chatId] === undefined) {
-    stateTracker[chatId] = 'new';
-    console.log("Added chatId " + chatId + " to the stateTracker.");
-  }
+    var chatId = msg.chat.id;
 
-  console.log("\nState for " + chatId + " is: " + stateTracker[chatId]);
+    // add chatId to statetracker
+    if (stateTracker[chatId] === undefined) {
+      stateTracker[chatId] = 'new';
+      console.log("Added chatId " + chatId + " to the stateTracker.");
+    }
 
-  // send received message to RASA-NLU to identify the intent
-  request.post(
-    'http://localhost:5000/parse', { json: { q: msg.text } }, function (error, response, body) {
+    console.log("\nState for " + chatId + " is: " + stateTracker[chatId]);
+
+    // send received message to RASA-NLU to identify the intent
+    request.post('http://localhost:5000/parse', { json: { q: msg.text } }, function (error, response, body) {
       if (error) {
         console.log(error);
       }
@@ -64,6 +72,7 @@ bot.on('message', function (msg) {
         runStateCode(chatId, msg);   
       }
    });
+  }  
 });
 
 // function that process any unknown response
@@ -76,7 +85,7 @@ var process_other_input = function(chatId) {
   switch (state) {
     case 'greet_pending':
     case 'new_pending':
-      if (analysedText. confidence > 0.5) {
+      if (analysedText.confidence > 0.5) {
         switch (analysedText.intent) {
         case 'task_request':
           msg = {
@@ -132,8 +141,6 @@ var process_other_input = function(chatId) {
 
 // processes the state
 var runStateCode = function(chatId, msg) {
-  console.log(lastText[chatId]);
-
   switch (stateTracker[chatId]) {
     case 'new':
       bot.sendMessage(chatId, "Hi there! I am Bucky and we could work together to finish some much needed work. Would you like to do a task to earn an extra buck?", {
@@ -169,14 +176,12 @@ var runStateCode = function(chatId, msg) {
         // switch to goodbye state
         stateTracker[chatId] = 'goodbye';
         bot.sendMessage(chatId, "Thanks for the effort. Hope to see you soon!");
-      } else {
-        process_other_input(chatId);
-      }
+      } 
+      // else {
+      //   process_other_input(chatId);
+      // }
       break;
     case 'goodbye':
-      // switch to greet_pending to avoid infinite default loop.
-      stateTracker[chatId] = 'greet_pending'
-
       bot.sendMessage(chatId, "Hi there! Would you like to do a task to earn an extra buck?", {
         reply_markup: JSON.stringify({
           one_time_keyboard: true,
@@ -186,6 +191,9 @@ var runStateCode = function(chatId, msg) {
           ]
         })
       });
+
+      // switch to greet_pending to avoid infinite default loop.
+      stateTracker[chatId] = 'greet_pending'
       break;
     case 'task_choice_pending':
       if (msg.text === 'Image recognition') {
@@ -208,7 +216,7 @@ var runStateCode = function(chatId, msg) {
           one_time_keyboard: true,
           keyboard: [
             ['Do task']
-          ]
+          ] 
         })
       }); 
 
@@ -261,6 +269,54 @@ var runStateCode = function(chatId, msg) {
       });       
   }
 }
+
+// Matches /begin
+bot.onText(/\/begin/, function (msg) {
+  var chatId = msg.chat.id;
+  stateTracker[chatId] = 'goodbye';
+  runStateCode(chatId, msg);
+});
+
+// Matches /choosetask
+bot.onText(/\/choosetask/, function (msg) {
+  var chatId = msg.chat.id;
+  msg.text = 'Yes';
+  stateTracker[chatId] = 'greet_pending';
+  runStateCode(chatId, msg);
+});
+
+// Matches /quit
+bot.onText(/\/quit/, function (msg) {
+  var chatId = msg.chat.id;
+
+  if (stateTracker[chatId] === 'task_completion') {
+    msg.text = 'Yes';
+    stateTracker[chatId] = 'greet_pending';
+    runStateCode(chatId, msg);
+  } else {
+    console.log("Saying no to greet_pending");
+    msg.text = 'No';
+    stateTracker[chatId] = 'greet_pending';
+    runStateCode(chatId, msg);
+  }
+});
+
+// Matches /help
+bot.onText(/\/help/, function (msg) {
+  var chatId = msg.chat.id;
+  bot.sendMessage(chatId, "I am here to help! You can use any of the following commands to start working.", {
+    reply_markup: JSON.stringify({
+      one_time_keyboard: true,
+      keyboard: [
+        [commands[0]],
+        [commands[1]],
+        [commands[2]],
+        [commands[3]]
+      ]
+    })
+  });
+});
+
 
 // connect to mongodb
 // var mongoose   = require('mongoose');
