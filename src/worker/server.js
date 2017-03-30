@@ -10,6 +10,7 @@ var app = express();
 var morgan = require('morgan');
 var request = require('request');
 var TelegramBot = require('node-telegram-bot-api');
+
 var Task = require('../core/models/task');
 var Unit = require('../core/models/unit');
 
@@ -246,7 +247,7 @@ var runStateCode = function (chatId, msg) {
             break;
         case 'task_process_pending':
             var task = lastTask[chatId];
-            if (!(chatId in questionCounter) || questionCounter[chatId] == -1) {
+            if (!(chatId in questionCounter) || questionCounter[chatId] === -1) {
                 questionCounter[chatId] = task.questions.length;
                 Unit.findOne({task_id: lastTask[chatId]._id}, function (err, unit) {
 
@@ -273,7 +274,7 @@ var runStateCode = function (chatId, msg) {
                     }
                     runStateCode(chatId, msg);
                 });
-            } else if (questionCounter[chatId] == 0) {
+            } else if (questionCounter[chatId] === 0) {
                 console.log("Completing task");
                 delete questionCounter[chatId];
                 stateTracker[chatId] = 'task_completion';
@@ -442,7 +443,7 @@ router.get('/communicate/:q', function (req, res) {
             if (error) {
                 console.log(error);
             }
-            if (!error && response.statusCode == 200) {
+            if (!error && response.statusCode === 200) {
                 // console.log(body);
                 // console.log(response);
                 res.json({
