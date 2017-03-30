@@ -5,20 +5,21 @@ var Unit = require('../../../core/models/unit');
 var router = express.Router();
 
 // Reset the entire tasks collection and seed some new data
-router.get('/reset-and-seed', function(req, res) {
+router.get('/reset-and-seed', function (req, res) {
     removeAllTasks();
-    addSingleTask(res)
+    addImageListTask(res)
+    addSentimentTask(res)
 });
 
 var removeAllTasks = () => {
     // First remove all the current ones.
-    Task.remove({}, function(err) {
+    Task.remove({}, function (err) {
         if (err)
             res.send(err);
     });
 }
 
-var addSingleTask = (res) => {
+var addImageListTask = (res) => {
     var task = new Task();
     task.name = 'Some Test task';
     task.requester_id = 'whateveridfromsomerequesterinstring';
@@ -28,14 +29,14 @@ var addSingleTask = (res) => {
         'image_2': 'content.image_url_second'
     }
     task.questions = [{
-            question: 'Does the image show a readable receipt from a restaurant?',
-            response_definition: {
-                'response_type': 'SELECT',
-                'response_select_options': [
-                    'yes', 'no'
-                ]
-            },
+        question: 'Does the image show a readable receipt from a restaurant?',
+        response_definition: {
+            'response_type': 'SELECT',
+            'response_select_options': [
+                'yes', 'no'
+            ]
         },
+    },
         {
             question: 'What is the name of the restaurant on the receipt?',
             response_definition: {
@@ -64,13 +65,13 @@ var addSingleTask = (res) => {
             'image_url_first': image_urls[i],
             'image_url_second': image_urls[(i + 1) % 3]
         }
-        unit.save(function(err) {
+        unit.save(function (err) {
             if (err)
                 res.send(err);
         });
     }
 
-    task.save(function(err) {
+    task.save(function (err) {
         if (err)
             res.send(err);
         else
@@ -79,5 +80,49 @@ var addSingleTask = (res) => {
             });
     });
 }
+
+var addSentimentTask = (res) => {
+    var task = new Task();
+    task.name = 'Some Sentiment task for D. Trump tweets';
+    task.requester_id = 'whateveridfromsomerequesterinstring';
+    task.content_definition.content_type = 'TEXT';
+    task.content_definition.content_fields = {
+        'text': 'content.tweet_text',
+    };
+    task.questions = [{
+        question: 'What is the sentiment of the tweet text shown?',
+        response_definition: {
+            'response_type': 'SELECT',
+            'response_select_options': [
+                'positivie', 'negative', 'neutral'
+            ]
+        }
+    }];
+
+    tweets = [
+        {'tweet_id': Math.floor(Math.random() * 1000) + 1000, 'tweet_text': 'This is awesome!.'},
+        {'tweet_id': Math.floor(Math.random() * 1000) + 1000, 'tweet_text': 'This is stupd!.'},
+        {'tweet_id': Math.floor(Math.random() * 1000) + 1000, 'tweet_text': 'This is fine.'}
+    ];
+
+    for (var i = 0; i < tweets.length; i++) {
+        var unit = new Unit();
+        unit.task_id = task.id;
+        unit.content = tweets[i];
+
+        unit.save(function (err) {
+            if (err)
+                res.send(err);
+        });
+    }
+
+    task.save(function (err) {
+        if (err)
+            res.send(err);
+        else
+            console.log('sentiment twitter seeded')
+    });
+}
+
 
 module.exports = router;
