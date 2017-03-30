@@ -21,11 +21,26 @@ app.use(bodyParser.json());
 // set port
 var port     = /*process.env.PORT || */ 3000;
 
+/* ========== TELEGRAM SETUP ============= */
 // replace the value below with the Telegram token you receive from @BotFather 
 var token = '334665274:AAHal-GI-g_Os4OiSOQ04D7h1pUY_98Slgo';
 
 // Create a bot that uses 'polling' to fetch new updates 
 var bot = new TelegramBot(token, { polling: true });
+
+/* ========== MONGODB SETUP ============= */
+// connect to mongodb
+var mongoose = require('mongoose');
+mongoose.connect('db');
+
+// verify connection to mongodb
+var conn = mongoose.connection;
+conn.on('error', console.error.bind(console, 'connection error:'));
+conn.once('open', function() {
+    console.log('Connected successfully to MongoDB');
+});
+
+/* ======================= */
 
 var stateTracker = {};
 var lastText = {};
