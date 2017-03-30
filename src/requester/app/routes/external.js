@@ -6,7 +6,7 @@ var Twitter = require('twitter-node-client').Twitter;
 /**
  * TODO: Move entire file to pipeline folder.
  */
-const existing_task_id = '58dd0c742bc62b008dfeede4';
+const existing_task_id = '58dd28ad360b5206d2b1e348';
 const task_units_url = 'http://localhost/api/tasks/' + existing_task_id + '/units';
 
 var config = {
@@ -20,7 +20,7 @@ var twitter = new Twitter(config);
 router.get('/twitter/tweet', function(req, res) {
     var data = twitter.getUserTimeline({
         screen_name: 'realDonaldTrump',
-        count: 5
+        count: 10
     }, function() {
         res.status(404).send({
             "error": "No tweets found"
@@ -34,9 +34,9 @@ router.get('/twitter/tweet', function(req, res) {
 
                 // Check for tweet ids currently in database.
                 const existing_tweet_ids = [];
+
                 for (var i = 0; i < current_units.length; i++) {
                     const existing_id = current_units[i].content.tweet_id
-                    console.log(existing_id)
                     existing_tweet_ids.push(existing_id)
                 }
 
@@ -47,15 +47,23 @@ router.get('/twitter/tweet', function(req, res) {
                     const text = json_result[i].text;
 
                     if(!existing_tweet_ids.includes(id)) {
-                        new_units.push(id)
+                        new_units.push({content : { tweet_id: id, tweet_text: text }});
                     }
                 }
 
+                for(var i = 0; i < new_units.length; i++) {
+                    request.post({url: task_units_url, form: new_units[i]}, function optionalCallback(err, httpResponse, body) {
+                        if (err) {
+                            return console.error('Failed to add tweet:', err);
+                        }
+                        console.log('Success! Server response: ', body);
+                    });
+                }
+
                 res.json({
-                    'New units: ' : new_units
+                    'New units' : new_units
                 })
-            }
-            else {
+            } else {
                 res.send(error)
             }
         });
