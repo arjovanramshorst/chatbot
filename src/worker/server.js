@@ -10,6 +10,8 @@ var app        = express();
 var morgan     = require('morgan');
 var request  	 = require('request');
 var TelegramBot = require('node-telegram-bot-api');
+var Task = require('../core/models/task');
+var Unit = require('../core/models/unit');
 
 // configure app
 app.use(morgan('dev')); // log requests to the console
@@ -44,6 +46,8 @@ conn.once('open', function() {
 
 var stateTracker = {};
 var lastText = {};
+var lastTask = {};
+var questionCounter = {};
 
 var commands = [  '/begin',
                   '/quit',
@@ -67,26 +71,27 @@ bot.on('message', function (msg) {
 
     console.log("\nState for " + chatId + " is: " + stateTracker[chatId]);
 
-    // send received message to RASA-NLU to identify the intent
-    request.post('http://localhost:5000/parse', { json: { q: msg.text } }, function (error, response, body) {
-      if (error) {
-        console.log(error);
-      }
-      if (!error && response.statusCode == 200 && body !== undefined) {
-        // save the result of the analysis according to chatId
-        var result = {
-          text: msg.text,
-          intent: body.intent,
-          confidence: body.confidence
-        };
-        lastText[chatId] = result;
+   //  // send received message to RASA-NLU to identify the intent
+   //  request.post('http://localhost:5000/parse', { json: { q: msg.text } }, function (error, response, body) {
+   //    if (error) {
+   //      console.log(error);
+   //    }
+   //    if (!error && response.statusCode == 200 && body !== undefined) {
+   //      // save the result of the analysis according to chatId
+   //      var result = {
+   //        text: msg.text,
+   //        intent: body.intent,
+   //        confidence: body.confidence
+   //      };
+   //      lastText[chatId] = result;
 
-        runStateCode(chatId, msg);   
-      } else {
-        console.log("Something went wrong with the analysis by the RASA-NLU. The text was: " + msg.text);
-        runStateCode(chatId, msg);   
-      }
-   });
+   //      runStateCode(chatId, msg);   
+   //    } else {
+   //      console.log("Something went wrong with the analysis by the RASA-NLU. The text was: " + msg.text);
+   //      runStateCode(chatId, msg);   
+   //    }
+   // });
+   runStateCode(chatId, msg);
   }  
 });
 
@@ -174,19 +179,26 @@ var runStateCode = function(chatId, msg) {
     case 'new_pending':
       if (msg.text === 'Yes') {
         // switch to task_choice state
-        stateTracker[chatId] = 'task_choice_pending'
+        stateTracker[chatId] = 'task_choice_pending';
 
-        bot.sendMessage(chatId, "What type of task would you like to do?", {
-          reply_markup: JSON.stringify({
-            one_time_keyboard: true,
-            keyboard: [
-              ['Image recognition'],
-              ['Provide more information on tasks'],
-              ['I don\'t want to do a task']
-            ]
-          })
+        // retrieve all available tasks
+        Task.find({}, function(err, tasks) {
+          // fill the task_names array
+          task_names = [];
+          tasks.forEach(function(task) {
+            task_names.push([task.name]);
+          });
+          task_names.push(['Provide more information on tasks']);
+          task_names.push(['I don\'t want to do a task']);
+
+          // Send message to the worker
+          bot.sendMessage(chatId, "What type of task would you like to do?", {
+            reply_markup: JSON.stringify({
+              one_time_keyboard: true,
+              keyboard: task_names
+            })
+          });
         });
-
       } else if (msg.text === 'No') {
         // switch to goodbye state
         stateTracker[chatId] = 'goodbye';
@@ -211,12 +223,19 @@ var runStateCode = function(chatId, msg) {
       stateTracker[chatId] = 'greet_pending'
       break;
     case 'task_choice_pending':
-      if (msg.text === 'Image recognition') {
-        stateTracker[chatId] = 'task_process_pending';
-        runStateCode(chatId, msg);
-      } else if (msg.text === 'Provide more information on tasks') {
+      if (msg.text === 'Provide more information on tasks') {
         stateTracker[chatId] = 'task_info';
         runStateCode(chatId, msg);
+      } else {
+        Task.find({}, function(err, tasks) {
+          tasks.forEach(function(task) {
+            if (msg.text === task.name) {
+              stateTracker[chatId] = 'task_process_pending';
+              lastTask[chatId] = task;
+              runStateCode(chatId, msg);
+            }
+          });
+        });
       }
       break;
     case 'task_info':
@@ -226,16 +245,64 @@ var runStateCode = function(chatId, msg) {
       runStateCode(chatId, msg);
       break;
     case 'task_process_pending':
-      bot.sendMessage(chatId, "Please perform this task", {
-        reply_markup: JSON.stringify({
-          one_time_keyboard: true,
-          keyboard: [
-            ['Do task']
-          ] 
-        })
-      }); 
+      var task = lastTask[chatId];
+      if (!(chatId in questionCounter) || questionCounter[chatId] == -1) {
+        questionCounter[chatId] = task.questions.length;
+        Unit.findOne({task_id: lastTask[chatId]._id}, function(err, unit) {
+        
+        // process all unit content
+        switch (task.content_definition.content_type) {
+          case 'IMAGE_LIST':
+            Object.keys(unit.content).forEach(function(key) {
+              bot.sendPhoto(chatId, unit.content[key], {});
+            })            
+            break;
+          default:
+            bot.sendMessage(chatId, "Please perform this task", {
+              reply_markup: JSON.stringify({
+                one_time_keyboard: true,
+                keyboard: [
+                  ['Do task']
+                ] 
+              })
+            });
+        }
+        runStateCode(chatId, msg);
+      })
+    } else if (questionCounter[chatId] == 0) {
+        console.log("Completing task");
+        delete questionCounter[chatId];
+        stateTracker[chatId] = 'task_completion';
+        runStateCode(chatId, msg);
+      }
+      else {
+        // process next question
+        switch (task.questions[questionCounter[chatId] - 1].response_definition.response_type) {
+          case 'SELECT':
+            var answers = [];
+            task.questions[questionCounter[chatId] - 1].response_definition.response_select_options.forEach(function(option) {
+              answers.push([option]);
+            });
 
-      stateTracker[chatId] = 'task_completion';
+            bot.sendMessage(chatId, task.questions[questionCounter[chatId] - 1].question, {
+              reply_markup: JSON.stringify({
+                one_time_keyboard: true,
+                keyboard: answers
+              })
+            });
+            break;
+          case 'FREE_TEXT':
+            bot.sendMessage(chatId, task.questions[questionCounter[chatId] - 1].question, {});
+            break;
+          case  'NUMBER':
+            bot.sendMessage(chatId, task.questions[questionCounter[chatId] - 1].question, {});
+            break;
+          default:
+            console.log('Unknown response_definition');
+        }
+        // decrease questionCounter
+        questionCounter[chatId] -= 1;
+      };
       break;
 
     case 'task_completion':
