@@ -17,3 +17,6 @@
 /src/core/storage/*.key
 /src/core/npm-debug.log
 /src/core/npm-debug.log
+
+/requester/node_modules
+/worker/node_modules
