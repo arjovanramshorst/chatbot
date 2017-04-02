@@ -1,9 +1,0 @@
-{
-    "intent_classifier": "./Models/model_20170316-104537/intent_classifier.dat", 
-    "entity_extractor": "./Models/model_20170316-104537/entity_extractor.dat", 
-    "trained_at": "20170316-104537", 
-    "training_data": "./Models/model_20170316-104537/training_data.json", 
-    "language_name": "en", 
-    "feature_extractor": "./total_word_feature_extractor.dat", 
-    "backend": "mitie"
-}
