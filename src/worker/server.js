@@ -63,8 +63,6 @@ var commands = ['/begin',
 // messages. 
 bot.on('message', function (msg) {
     if (commands.indexOf(msg.text) === -1) {
-        console.log("not entering commands")
-
         var chatId = msg.chat.id;
 
         // add chatId to statetracker
@@ -250,6 +248,7 @@ var runStateCode = function (chatId, msg) {
             break;
         case 'task_process_pending':
             var task = lastTask[chatId];
+
             if (!(chatId in questionCounter)) {
                 questionCounter[chatId] = task.questions.length;
                 Unit.findOne({task_id: lastTask[chatId]._id}, function (err, unit) {
@@ -278,14 +277,10 @@ var runStateCode = function (chatId, msg) {
                     }
                     runStateCode(chatId, msg);
                 });
-            } else if (questionCounter[chatId] === 0) {
-                processAnswer(chatId, msg, task.questions.length);
-                questionCounter[chatId] -= 1;
-                runStateCode(chatId, msg);
-            } else if (questionCounter[chatId] < 0) {
+            } 
+            else if (questionCounter[chatId] === 0) {
                 console.log("Completing task");
                 saveAnswers(currentAnswers[chatId], chatId, task._id, currentUnit[chatId]);
-
 
                 // Delete all allocated structures
                 delete questionCounter[chatId];
@@ -296,41 +291,23 @@ var runStateCode = function (chatId, msg) {
                 runStateCode(chatId, msg);
             }
             else {
-                console.log(questionCounter[chatId]);
-
-                // If we expect the message to contain an answer to the last question
-                processAnswer(chatId, msg, task.questions.length);
-
-                // process next question
-                switch (task.questions[questionCounter[chatId] - 1].response_definition.response_type) {
-                    case 'SELECT':
-                        var answers = [];
-                        task.questions[questionCounter[chatId] - 1].response_definition.response_select_options.forEach(function (option) {
-                            answers.push([option]);
-                        });
-
-                        bot.sendMessage(chatId, task.questions[questionCounter[chatId] - 1].question, {
-                            reply_markup: JSON.stringify({
-                                one_time_keyboard: true,
-                                keyboard: answers
-                            })
-                        });
+                if (processAnswer(chatId, msg, task.questions.length)) {
+                    // decrease questionCounter and send next question if available
+                    if (questionCounter[chatId] > 1) {
+                        questionCounter[chatId] -= 1;
+                        sendNextQuestion(task, chatId);
+                    } else {
+                        // if the last question has been answered with the correct type
+                        questionCounter[chatId] -= 1;
+                        runStateCode(chatId, msg);
                         break;
-                    case 'FREE_TEXT':
-                        bot.sendMessage(chatId, task.questions[questionCounter[chatId] - 1].question, {});
-                        break;
-                    case  'NUMBER':
-                        bot.sendMessage(chatId, task.questions[questionCounter[chatId] - 1].question, {});
-                        break;
-                    default:
-                        console.log('Unknown response_definition');
-                }
-                // decrease questionCounter
-                questionCounter[chatId] -= 1;
+                    }
+                } else {
+                    bot.sendMessage(chatId, "Please answer the question using the correct answer type.");
+                    sendNextQuestion(task, chatId);
+                }          
             }
-            ;
             break;
-
         case 'task_completion':
             bot.sendMessage(chatId, "Great job! What would you like to do next?", {
                 reply_markup: JSON.stringify({
@@ -342,7 +319,6 @@ var runStateCode = function (chatId, msg) {
                     ]
                 })
             });
-
             stateTracker[chatId] = 'task_completion_pending';
             break;
         case 'task_completion_pending':
@@ -378,6 +354,33 @@ var runStateCode = function (chatId, msg) {
     }
 }
 
+// Send the next question of the task to the worker identified by chatId
+var sendNextQuestion = function(task, chatId) {
+    switch (task.questions[questionCounter[chatId] - 1].response_definition.response_type) {
+        case 'SELECT':
+            var answers = [];
+            task.questions[questionCounter[chatId] - 1].response_definition.response_select_options.forEach(function (option) {
+                answers.push([option]);
+            });
+
+            bot.sendMessage(chatId, task.questions[questionCounter[chatId] - 1].question, {
+                reply_markup: JSON.stringify({
+                    one_time_keyboard: true,
+                    keyboard: answers
+                })
+            });
+            break;
+        case 'FREE_TEXT':
+            bot.sendMessage(chatId, task.questions[questionCounter[chatId] - 1].question, {});
+            break;
+        case  'NUMBER':
+            bot.sendMessage(chatId, task.questions[questionCounter[chatId] - 1].question, {});
+            break;
+        default:
+            console.log('Unknown response_definition');
+    }
+}
+
 // Writes the answers for unit unitId by worker chatId to the database
 var saveAnswers = function (answers, chatId, taskId, unitId) {
     var solution = new Solution();
@@ -398,11 +401,13 @@ var saveAnswers = function (answers, chatId, taskId, unitId) {
 
 /* Processes an answer to a question of a task and stores it in a global variable */
 var processAnswer = function (chatId, msg, task_length) {
-    if (questionCounter[chatId] < task_length) {
-        if (msg.text) {
+    var task = lastTask[chatId];
+
+    if (questionCounter[chatId] <= task_length && (currentAnswers[chatId])) {
+        if (msg.text && (task.questions[questionCounter[chatId] - 1].response_definition !== 'IMAGE')) {
             currentAnswers[chatId].push(msg.text);
             console.log(currentAnswers[chatId]);
-        } else if (msg.photo) {
+        } else if (msg.photo && (task.questions[questionCounter[chatId] - 1].response_definition === 'IMAGE')) {
             currentAnswers[chatId].push(msg.photo);
             console.log(currentAnswers[chatId]);
             if (msg.caption) {
@@ -410,11 +415,15 @@ var processAnswer = function (chatId, msg, task_length) {
             } else {
                 console.log("Photo without caption");
             }
+        } else {
+            console.log("There is an incorrect answer type received.");
+            return false;
         }
-        // currentAnswers[chatId].push();
+        return true;
     } else {
         // initialize array for answers
         currentAnswers[chatId] = [];
+        return false;
     }
 }
 
