@@ -3,7 +3,7 @@ var Twitter = require('twitter-node-client').Twitter;
 /**
  * Harcoded task id. Should be known to the user (requester) and can therefore be hardcoded.
  */
-const existing_task_id = '58dd588617254c0bc175508e';
+const existing_task_id = '58e29d01c7882000261414f3';
 const task_units_url = 'http://localhost:3333/api/tasks/' + existing_task_id + '/units';
 
 /**
@@ -17,17 +17,35 @@ var config = {
 };
 var twitter = new Twitter(config);
 
+// Process unit to check if we should add it to new units.
+var validateTweetText = (text) => {
+
+    required_words = [
+        'obama',
+        'obamacare',
+        'president'
+    ];
+
+    for (var i = 0; i < required_words.length; i++) {
+        if (text.toLowerCase().indexOf(required_words[i]) > -1) {
+            return true
+        }
+    }
+    return false
+
+};
+
 var data = twitter.getUserTimeline({
     screen_name: 'realDonaldTrump',
     count: 1000
-}, function () {
+}, function() {
     res.status(404).send({
         "error": "No tweets found"
     });
-}, function (data) {
+}, function(data) {
     const json_result = JSON.parse(data);
 
-    request(task_units_url, function (error, response, body) {
+    request(task_units_url, function(error, response, body) {
         if (!error) {
             const current_units = JSON.parse(body);
             // Check for tweet ids currently in database.
@@ -45,7 +63,17 @@ var data = twitter.getUserTimeline({
                 const text = json_result[i].text;
 
                 if (existing_tweet_ids.indexOf(id) < 0) {
-                    new_units.push({content: {tweet_id: id, tweet_text: text}});
+
+                    if (validateTweetText(text)) {
+                        new_units.push({
+                            content: {
+                                tweet_id: id,
+                                tweet_text: text
+                            }
+                        });
+                    }
+
+
                 }
             }
             console.log('new: ' + new_units)
