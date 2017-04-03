@@ -13,6 +13,7 @@ var TelegramBot = require('node-telegram-bot-api');
 
 var Task = require('../core/models/task');
 var Unit = require('../core/models/unit');
+var Solution = require('../core/models/solution');
 
 // configure app
 app.use(morgan('dev')); // log requests to the console
@@ -49,6 +50,8 @@ var stateTracker = {};
 var lastText = {};
 var lastTask = {};
 var questionCounter = {};
+var currentAnswers = {};
+var currentUnit = {};
 
 var commands = ['/begin',
     '/quit',
@@ -247,9 +250,10 @@ var runStateCode = function (chatId, msg) {
             break;
         case 'task_process_pending':
             var task = lastTask[chatId];
-            if (!(chatId in questionCounter) || questionCounter[chatId] === -1) {
+            if (!(chatId in questionCounter)) {
                 questionCounter[chatId] = task.questions.length;
                 Unit.findOne({task_id: lastTask[chatId]._id}, function (err, unit) {
+                    currentUnit[chatId] = unit._id;
 
                     // process all unit content
                     switch (task.content_definition.content_type) {
@@ -275,12 +279,28 @@ var runStateCode = function (chatId, msg) {
                     runStateCode(chatId, msg);
                 });
             } else if (questionCounter[chatId] === 0) {
+                processAnswer(chatId, msg, task.questions.length);
+                questionCounter[chatId] -= 1;
+                runStateCode(chatId, msg);
+            } else if (questionCounter[chatId] < 0) {
                 console.log("Completing task");
+                saveAnswers(currentAnswers[chatId], chatId, task._id, currentUnit[chatId]);
+
+
+                // Delete all allocated structures
                 delete questionCounter[chatId];
+                delete currentAnswers[chatId];
+                delete currentUnit[chatId];
+
                 stateTracker[chatId] = 'task_completion';
                 runStateCode(chatId, msg);
             }
             else {
+                console.log(questionCounter[chatId]);
+
+                // If we expect the message to contain an answer to the last question
+                processAnswer(chatId, msg, task.questions.length);
+
                 // process next question
                 switch (task.questions[questionCounter[chatId] - 1].response_definition.response_type) {
                     case 'SELECT':
@@ -355,6 +375,46 @@ var runStateCode = function (chatId, msg) {
                     ]
                 })
             });
+    }
+}
+
+// Writes the answers for unit unitId by worker chatId to the database
+var saveAnswers = function (answers, chatId, taskId, unitId) {
+    var solution = new Solution();
+
+    solution.task_id = taskId;
+    solution.worker_id = chatId;
+    solution.unit_id = unitId;
+    solution.responses = answers;
+
+    solution.save(function(err) {
+        if (err)
+            console.error(err);
+        else {
+            console.log("Saved answers successfully!");
+        }
+    })
+}
+
+/* Processes an answer to a question of a task and stores it in a global variable */
+var processAnswer = function (chatId, msg, task_length) {
+    if (questionCounter[chatId] < task_length) {
+        if (msg.text) {
+            currentAnswers[chatId].push(msg.text);
+            console.log(currentAnswers[chatId]);
+        } else if (msg.photo) {
+            currentAnswers[chatId].push(msg.photo);
+            console.log(currentAnswers[chatId]);
+            if (msg.caption) {
+                console.log(msg.caption)
+            } else {
+                console.log("Photo without caption");
+            }
+        }
+        // currentAnswers[chatId].push();
+    } else {
+        // initialize array for answers
+        currentAnswers[chatId] = [];
     }
 }
 
