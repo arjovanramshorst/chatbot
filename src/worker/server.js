@@ -90,7 +90,7 @@ bot.on('message', function (msg) {
 
         // add chatId to statetracker
         if (chatId in stateTracker === false) {
-            stateTracker[chatId] = 'new';
+            setState(chatId, 'new');
             console.log("Added user " + chatId + " to the stateTracker.");
         }
 
