@@ -112,6 +112,33 @@ var getQuestionCounter = function(chatId) {
     return questionCounter[chatId];
 };
 
+const fetchTasks = (query = {}) => {
+    return new Promise((resolve, reject) => {
+        Task.find(query, function (err, tasks) {
+            if (tasks.length > 0) {
+                resolve(tasks);
+            } else if (tasks.length === 0) {
+                reject();
+            }
+        });
+    });
+}
+
+const fetchTask = (query = {}) => {
+    return new Promise((resolve, reject) => {
+        Task.findOne(query, (err, task) => {
+            if(err) {
+                reject(err)
+            } else {
+                resolve(task)
+            }
+        })
+    })
+}
+
+const fetchTaskByName = (name) => fetchTask({name: name});
+
+
 // Listen for any kind of message. There are different kinds of messages.
 bot.on('message', function (msg) {
     if (commands.indexOf(msg.text) === -1) {
@@ -142,52 +169,31 @@ var executeState = function(chatId, msg) {
             executeState(chatId, msg);
             break;
         case 'start': // provides an overview of tasks
+            fetchTasks().then(tasks => {
+                setState(chatId, 'task_choice_pending');
 
-            Task.find({}, function (err, tasks) {
+                const taskNames = tasks.map(task => task.name)
 
-                // If there are tasks
-                if(tasks.length > 0) {
-                    // set the new state
-                    setState(chatId, 'task_choice_pending');
+                bot.sendMessage(chatId, "What task would you like to do?", {
+                    reply_markup: JSON.stringify({
+                        one_time_keyboard: true,
+                        keyboard: taskNames
+                    })
+                });
 
-                    // fill the task_names array
-                    taskNames = [];
-                    tasks.forEach(function (task) {
-                        taskNames.push([task.name]);
-                    });
-
-                    // Send message to the worker
-                    bot.sendMessage(chatId, "What task would you like to do?", {
-                        reply_markup: JSON.stringify({
-                            one_time_keyboard: true,
-                            keyboard: taskNames
-                        })
-                    });
-                }
-                // If there are no tasks
-                else {
-                    bot.sendMessage(chatId, "Hi there! I am Bucky. There are no tasks available at the moment. Come back later!");
-                }
+            }).catch(() => {
+                bot.sendMessage(chatId, "Hi there! I am Bucky. There are no tasks available at the moment. Come back later!");
             });
             //NOTE: no need to make recursive call as the bot will passively await the answer.
             break;
         case 'task_choice_pending': // waiting for user to select task
-            Task.find({}, function (err, tasks) {
-                var found = false;
-                tasks.forEach(function (task) {
-                    if (msg.text === task.name) {
-                        found = true;
-                        setTask(chatId, task);
-                    }
-                });
-
-                if(found) {
-                    setState(chatId, 'task_init');
-                } else {
-                    bot.sendMessage(chatId, "Sorry, but I do not know that task.");
-                    setState(chatId, 'start');
-                }
-
+            fetchTaskByName(msg.text).then(result => {
+                setTask(chatId, result);
+                setState(chatId, 'task_init');
+                executeState(chatId, msg)
+            }).catch(err => {
+                bot.sendMessage(chatId, "Sorry, but I do not know that task.");
+                setState(chatId, 'start');
                 executeState(chatId, msg);
             });
             break;
