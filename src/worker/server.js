@@ -55,8 +55,8 @@ var questionCounter = {};
 var activeTaskAnswers = {};
 
 var commands = [
-    '/begin',
-    '/quit',
+    '/start',
+    '/reset',
     '/choosetask',
     '/help'
 ];
@@ -350,10 +350,11 @@ bot.onText(/\/choosetask/, function (msg) {
     executeState(chatId, msg);
 });
 
-// Matches /quit
-bot.onText(/\/quit/, function (msg) {
+// Matches /reset
+bot.onText(/\/reset/, function (msg) {
     var chatId = msg.chat.id;
     setState(chatId, 'new');
+    bot.sendMessage(chatId, 'I will reboot now!');
     executeState(chatId, msg);
 });
 
