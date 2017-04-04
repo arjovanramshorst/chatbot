@@ -28,8 +28,8 @@ var port = /*process.env.PORT || */ 3000;
 
 /* ========== TELEGRAM SETUP ============= */
 // replace the value below with the Telegram token you receive from @BotFather 
-//var token = '295147674:AAERxZjce89nISZpVfBMbyJDK6FIHE8u1Zw';
-var token = '334665274:AAHal-GI-g_Os4OiSOQ04D7h1pUY_98Slgo';
+var token = '295147674:AAERxZjce89nISZpVfBMbyJDK6FIHE8u1Zw';
+// var token = '334665274:AAHal-GI-g_Os4OiSOQ04D7h1pUY_98Slgo';
 
 // Create a bot that uses 'polling' to fetch new updates
 var bot = new Tgfancy(token, {polling: true, orderedSending: true});
@@ -138,7 +138,6 @@ const fetchTask = (query = {}) => {
 
 const fetchTaskByName = (name) => fetchTask({name: name});
 
-
 // Listen for any kind of message. There are different kinds of messages.
 bot.on('message', function (msg) {
     if (commands.indexOf(msg.text) === -1) {
@@ -172,7 +171,7 @@ var executeState = function(chatId, msg) {
             fetchTasks().then(tasks => {
                 setState(chatId, 'task_choice_pending');
 
-                const taskNames = tasks.map(task => task.name)
+                const taskNames = tasks.map(task => [task.name])
 
                 bot.sendMessage(chatId, "What task would you like to do?", {
                     reply_markup: JSON.stringify({
@@ -311,7 +310,7 @@ var executeState = function(chatId, msg) {
             break;
         case 'task_complete': // clean up when task is complete
             //save the solution to the task
-            saveAnswers(getAnswers(chatId), chatId, getTask(chatId)._id, getUnit(chatId)._id);
+            saveAnswers(getAnswers(chatId), chatId, getUnit(chatId));
             bot.sendMessage(chatId, "The task is complete!");
 
             setState(chatId, 'start');
@@ -325,21 +324,20 @@ var executeState = function(chatId, msg) {
 };
 
 // Writes the answers for unit unitId by worker chatId to the database
-var saveAnswers = function (answers, chatId, taskId, unitId) {
-    var solution = new Solution();
+const saveAnswers = (answers, chatId, unit) => {
+    unit.solutions.push({
+        responses: answers,
+        reviewed: 'PENDING',
+        user_id: chatId,
+    });
 
-    solution.task_id = taskId;
-    solution.worker_id = chatId;
-    solution.unit_id = unitId;
-    solution.responses = answers;
-
-    solution.save(function(err) {
+    unit.save(function(err) {
         if (err)
             console.error(err);
         else {
             console.log("Saved answers successfully!");
         }
-    })
+    });
 };
 
 // Matches /start

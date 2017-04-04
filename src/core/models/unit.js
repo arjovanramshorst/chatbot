@@ -9,6 +9,7 @@ var UnitSchema = new Schema({
     task_id: String, // Parent is a task.
     content: Object,
     solutions: [{
+        user_id: String,
         responses: [],
         reviewed: String
     }]
