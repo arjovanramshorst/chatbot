@@ -9,10 +9,12 @@ var bodyParser = require('body-parser');
 var app = express();
 var morgan = require('morgan');
 var request = require('request');
-var TelegramBot = require('node-telegram-bot-api');
+
+var Tgfancy = require("tgfancy");
 
 var Task = require('../core/models/task');
 var Unit = require('../core/models/unit');
+var Solution = require('../core/models/solution');
 
 // configure app
 app.use(morgan('dev')); // log requests to the console
@@ -26,10 +28,11 @@ var port = /*process.env.PORT || */ 3000;
 
 /* ========== TELEGRAM SETUP ============= */
 // replace the value below with the Telegram token you receive from @BotFather 
-var token = '334665274:AAHal-GI-g_Os4OiSOQ04D7h1pUY_98Slgo';
+var token = '295147674:AAERxZjce89nISZpVfBMbyJDK6FIHE8u1Zw';
+// var token = '334665274:AAHal-GI-g_Os4OiSOQ04D7h1pUY_98Slgo';
 
-// Create a bot that uses 'polling' to fetch new updates 
-var bot = new TelegramBot(token, {polling: true});
+// Create a bot that uses 'polling' to fetch new updates
+var bot = new Tgfancy(token, {polling: true, orderedSending: true});
 
 /* ========== MONGODB SETUP ============= */
 // connect to mongodb
@@ -46,377 +49,334 @@ conn.once('open', function () {
 /* ======================= */
 
 var stateTracker = {};
-var lastText = {};
-var lastTask = {};
+var activeTask = {};
+var activeUnit = {};
 var questionCounter = {};
+var activeTaskAnswers = {};
 
-var commands = ['/begin',
-    '/quit',
+var commands = [
+    '/start',
+    '/reset',
     '/choosetask',
     '/help'
 ];
 
-// Listen for any kind of message. There are different kinds of 
-// messages. 
-bot.on('message', function (msg) {
-    if (commands.indexOf(msg.text) === -1) {
-        console.log("not entering commands")
+var getState = function(chatId) {
+    return stateTracker[chatId];
+};
 
-        var chatId = msg.chat.id;
+var setState = function(chatId, state) {
+    stateTracker[chatId] = state;
+};
 
-        // add chatId to statetracker
-        if (stateTracker[chatId] === undefined) {
-            stateTracker[chatId] = 'new';
-            console.log("Added chatId " + chatId + " to the stateTracker.");
-        }
+var getTask = function(chatId) {
+    return activeTask[chatId];
+};
 
-        console.log("\nState for " + chatId + " is: " + stateTracker[chatId]);
+var setTask = function(chatId, unit) {
+    activeTask[chatId] = unit;
+};
 
-        //  // send received message to RASA-NLU to identify the intent
-        //  request.post('http://localhost:5000/parse', { json: { q: msg.text } }, function (error, response, body) {
-        //    if (error) {
-        //      console.log(error);
-        //    }
-        //    if (!error && response.statusCode == 200 && body !== undefined) {
-        //      // save the result of the analysis according to chatId
-        //      var result = {
-        //        text: msg.text,
-        //        intent: body.intent,
-        //        confidence: body.confidence
-        //      };
-        //      lastText[chatId] = result;
+var getUnit = function(chatId) {
+    return activeUnit[chatId];
+};
 
-        //      runStateCode(chatId, msg);
-        //    } else {
-        //      console.log("Something went wrong with the analysis by the RASA-NLU. The text was: " + msg.text);
-        //      runStateCode(chatId, msg);
-        //    }
-        // });
-        runStateCode(chatId, msg);
+var setUnit = function(chatId, unit) {
+    activeUnit[chatId] = unit;
+};
+
+var pushAnswer = function(chatId, answer) {
+    if(chatId in activeTaskAnswers === false) {
+        activeTaskAnswers[chatId] = [];
     }
-});
+    activeTaskAnswers[chatId].push(answer);
+};
 
-// function that process any unknown response
-var process_other_input = function (chatId) {
-    console.log("Unknown answer by user.");
-
-    var analysedText = lastText[chatId];
-    var state = stateTracker[chatId];
-
-    switch (state) {
-        case 'greet_pending':
-        case 'new_pending':
-            if (analysedText.confidence > 0.5) {
-                switch (analysedText.intent) {
-                    case 'task_request':
-                        msg = {
-                            text: 'Yes'
-                        };
-                        runStateCode(chatId, msg);
-                        break;
-                    case 'goodbye':
-                        msg = {
-                            text: 'No'
-                        };
-                        runStateCode(chatId, msg);
-                        break;
-                    default:
-                        bot.sendMessage(chatId, "I am not sure what you mean. Please reply using the following options:", {
-                            reply_markup: JSON.stringify({
-                                one_time_keyboard: true,
-                                keyboard: [
-                                    ['Yes'],
-                                    ['No']
-                                ]
-                            })
-                        });
-                }
-            } else {
-                bot.sendMessage(chatId, "I am not sure what you mean. Please reply using the following options:", {
-                    reply_markup: JSON.stringify({
-                        one_time_keyboard: true,
-                        keyboard: [
-                            ['Yes'],
-                            ['No']
-                        ]
-                    })
-                });
-            }
-            break;
-        case 'goodbye':
-            break;
-        case 'task_choice_pending':
-            break;
-        case 'task_info':
-            break;
-        case 'task_process_pending':
-            break;
-        case 'task_completion_pending':
-            break;
-        case 'task_completion':
-            break;
-        default:
-            console.log('x');
+var getAnswers = function(chatId) {
+    if(chatId in activeTaskAnswers) {
+        return activeTaskAnswers[chatId];
+    } else {
+        return [];
     }
 };
 
-// processes the state
-var runStateCode = function (chatId, msg) {
-    switch (stateTracker[chatId]) {
-        case 'new':
-            bot.sendMessage(chatId, "Hi there! I am Bucky and we could work together to finish some much needed work. Would you like to do a task to earn an extra buck?", {
-                reply_markup: JSON.stringify({
-                    one_time_keyboard: true,
-                    keyboard: [
-                        ['Yes'],
-                        ['No']
-                    ]
-                })
-            });
-            // switch to new_pending state
-            stateTracker[chatId] = 'new_pending';
-            break;
-        case 'greet_pending':
-        case 'new_pending':
-            if (msg.text === 'Yes') {
-                // switch to task_choice state
-                stateTracker[chatId] = 'task_choice_pending';
+var initQuestionCounter = function(chatId) {
+    questionCounter[chatId] = 0;
+};
 
-                // retrieve all available tasks
-                Task.find({}, function (err, tasks) {
-                    // fill the task_names array
-                    task_names = [];
-                    tasks.forEach(function (task) {
-                        task_names.push([task.name]);
-                    });
-                    task_names.push(['Provide more information on tasks']);
-                    task_names.push(['I don\'t want to do a task']);
+var incrementQuestionCounter = function(chatId) {
+    questionCounter[chatId] += 1;
+};
 
-                    // Send message to the worker
-                    bot.sendMessage(chatId, "What type of task would you like to do?", {
-                        reply_markup: JSON.stringify({
-                            one_time_keyboard: true,
-                            keyboard: task_names
-                        })
-                    });
-                });
-            } else if (msg.text === 'No') {
-                // switch to goodbye state
-                stateTracker[chatId] = 'goodbye';
-                bot.sendMessage(chatId, "Thanks for the effort. Hope to see you soon!");
+var getQuestionCounter = function(chatId) {
+    return questionCounter[chatId];
+};
+
+const fetchTasks = (query = {}) => {
+    return new Promise((resolve, reject) => {
+        Task.find(query, function (err, tasks) {
+            if (tasks.length > 0) {
+                resolve(tasks);
+            } else if (tasks.length === 0) {
+                reject();
             }
-            // else {
-            //   process_other_input(chatId);
-            // }
-            break;
-        case 'goodbye':
-            bot.sendMessage(chatId, "Hi there! Would you like to do a task to earn an extra buck?", {
-                reply_markup: JSON.stringify({
-                    one_time_keyboard: true,
-                    keyboard: [
-                        ['Yes'],
-                        ['No']
-                    ]
-                })
-            });
-
-            // switch to greet_pending to avoid infinite default loop.
-            stateTracker[chatId] = 'greet_pending'
-            break;
-        case 'task_choice_pending':
-            if (msg.text === 'Provide more information on tasks') {
-                stateTracker[chatId] = 'task_info';
-                runStateCode(chatId, msg);
-            } else {
-                Task.find({}, function (err, tasks) {
-                    tasks.forEach(function (task) {
-                        if (msg.text === task.name) {
-                            stateTracker[chatId] = 'task_process_pending';
-                            lastTask[chatId] = task;
-                            runStateCode(chatId, msg);
-                        }
-                    });
-                });
-            }
-            break;
-        case 'task_info':
-            bot.sendMessage(chatId, "Description of Task X.");
-            stateTracker[chatId] = 'greet_pending';
-            msg.text = 'Yes';
-            runStateCode(chatId, msg);
-            break;
-        case 'task_process_pending':
-            var task = lastTask[chatId];
-            if (!(chatId in questionCounter) || questionCounter[chatId] === -1) {
-                questionCounter[chatId] = task.questions.length;
-                Unit.findOne({task_id: lastTask[chatId]._id}, function (err, unit) {
-
-                    // process all unit content
-                    switch (task.content_definition.content_type) {
-                        case 'IMAGE_LIST':
-                            Object.keys(unit.content).forEach(function (key) {
-                                bot.sendPhoto(chatId, unit.content[key], {});
-                            })
-                            break;
-                        case 'TEXT_LIST':
-                            Object.keys(unit.content).forEach(function (key) {
-                                bot.sendMessage(chatId, unit.content[key], {});
-                            })
-                        default:
-                            bot.sendMessage(chatId, "Please perform this task", {
-                                reply_markup: JSON.stringify({
-                                    one_time_keyboard: true,
-                                    keyboard: [
-                                        ['Do task']
-                                    ]
-                                })
-                            });
-                    }
-                    runStateCode(chatId, msg);
-                });
-            } else if (questionCounter[chatId] === 0) {
-                console.log("Completing task");
-                delete questionCounter[chatId];
-                stateTracker[chatId] = 'task_completion';
-                runStateCode(chatId, msg);
-            }
-            else {
-                // process next question
-                switch (task.questions[questionCounter[chatId] - 1].response_definition.response_type) {
-                    case 'SELECT':
-                        var answers = [];
-                        task.questions[questionCounter[chatId] - 1].response_definition.response_select_options.forEach(function (option) {
-                            answers.push([option]);
-                        });
-
-                        bot.sendMessage(chatId, task.questions[questionCounter[chatId] - 1].question, {
-                            reply_markup: JSON.stringify({
-                                one_time_keyboard: true,
-                                keyboard: answers
-                            })
-                        });
-                        break;
-                    case 'FREE_TEXT':
-                        bot.sendMessage(chatId, task.questions[questionCounter[chatId] - 1].question, {});
-                        break;
-                    case  'NUMBER':
-                        bot.sendMessage(chatId, task.questions[questionCounter[chatId] - 1].question, {});
-                        break;
-                    default:
-                        console.log('Unknown response_definition');
-                }
-                // decrease questionCounter
-                questionCounter[chatId] -= 1;
-            }
-            ;
-            break;
-
-        case 'task_completion':
-            bot.sendMessage(chatId, "Great job! What would you like to do next?", {
-                reply_markup: JSON.stringify({
-                    one_time_keyboard: true,
-                    keyboard: [
-                        ['Perform same type of task'],
-                        ['Perform another type of task'],
-                        ['Quit for now']
-                    ]
-                })
-            });
-
-            stateTracker[chatId] = 'task_completion_pending';
-            break;
-        case 'task_completion_pending':
-            if (msg.text === 'Perform same type of task') {
-                stateTracker[chatId] = 'task_process_pending';
-                runStateCode(chatId, msg);
-            } else if (msg.text === 'Perform another type of task') {
-                stateTracker[chatId] = 'greet_pending';
-                msg.text = 'Yes';
-                runStateCode(chatId, msg);
-            } else if (msg.text === 'Quit for now') {
-                stateTracker[chatId] = 'greet_pending';
-                msg.text = 'No';
-                runStateCode(chatId, msg);
-            } else {
-                console.log("Unknown answer by user.");
-            }
-            break;
-
-        default:
-            // switch to greet_pending to avoid infinite default loop.
-            stateTracker[chatId] = 'greet_pending'
-
-            bot.sendMessage(chatId, "Hi there! Would you like to do a task to earn an extra buck?", {
-                reply_markup: JSON.stringify({
-                    one_time_keyboard: true,
-                    keyboard: [
-                        ['Yes'],
-                        ['No']
-                    ]
-                })
-            });
-    }
+        });
+    });
 }
 
-// Matches /begin
-bot.onText(/\/begin/, function (msg) {
+const fetchTask = (query = {}) => {
+    return new Promise((resolve, reject) => {
+        Task.findOne(query, (err, task) => {
+            if(err) {
+                reject(err)
+            } else {
+                resolve(task)
+            }
+        })
+    })
+}
+
+const fetchTaskByName = (name) => fetchTask({name: name});
+
+// Listen for any kind of message. There are different kinds of messages.
+bot.on('message', function (msg) {
+    if (commands.indexOf(msg.text) === -1) {
+        var chatId = msg.chat.id;
+
+        // add chatId to statetracker
+        if (chatId in stateTracker === false) {
+            setState(chatId, 'new');
+            console.log("Added user " + chatId + " to the stateTracker.");
+        }
+
+        console.log("\nState for " + chatId + " is: " + getState(chatId));
+
+        executeState(chatId, msg);
+    } else {
+        console.log('Shortcut match found');
+    }
+});
+
+
+var executeState = function(chatId, msg) {
+    var task, question;
+
+    switch (getState(chatId)) {
+        case 'new':
+            bot.sendMessage(chatId, "Hi there! I am Bucky and we could work together to finish some much needed work.");
+            setState(chatId, 'start');
+            executeState(chatId, msg);
+            break;
+        case 'start': // provides an overview of tasks
+            fetchTasks().then(tasks => {
+                setState(chatId, 'task_choice_pending');
+
+                const taskNames = tasks.map(task => [task.name])
+
+                bot.sendMessage(chatId, "What task would you like to do?", {
+                    reply_markup: JSON.stringify({
+                        one_time_keyboard: true,
+                        keyboard: taskNames
+                    })
+                });
+
+            }).catch(() => {
+                bot.sendMessage(chatId, "Hi there! I am Bucky. There are no tasks available at the moment. Come back later!");
+            });
+            //NOTE: no need to make recursive call as the bot will passively await the answer.
+            break;
+        case 'task_choice_pending': // waiting for user to select task
+            fetchTaskByName(msg.text).then(result => {
+                setTask(chatId, result);
+                setState(chatId, 'task_init');
+                executeState(chatId, msg)
+            }).catch(err => {
+                bot.sendMessage(chatId, "Sorry, but I do not know that task.");
+                setState(chatId, 'start');
+                executeState(chatId, msg);
+            });
+            break;
+        case 'task_init': // sending data from unit
+            task = getTask(chatId);
+
+            Unit.findOne({task_id: task._id}, function (err, unit) {
+                initQuestionCounter(chatId);
+                setUnit(chatId, unit);
+
+                // process all unit content
+                switch (task.content_definition.content_type) {
+                    case 'IMAGE_LIST':
+                        Object.keys(unit.content).forEach(function (key) {
+                            bot.sendPhoto(chatId, unit.content[key], {});
+                        });
+                        break;
+                    case 'TEXT_LIST':
+                        Object.keys(unit.content).forEach(function (key) {
+                            bot.sendMessage(chatId, unit.content[key], {});
+                        });
+                        break;
+                    default:
+                        bot.sendMessage(chatId, "Please perform the following task");
+                }
+
+                setState(chatId, 'task_ask_question');
+                executeState(chatId, msg);
+            });
+            break;
+        case 'task_ask_question': // asking a question
+            task = getTask(chatId);
+            question = task.questions[getQuestionCounter(chatId)];
+
+            // ask the question
+            switch (question.response_definition.response_type) {
+                case 'SELECT':
+                    var answers = [];
+                    question.response_definition.response_select_options.forEach(function (option) {
+                        answers.push([option]);
+                    });
+
+                    bot.sendMessage(chatId, question.question, {
+                        reply_markup: JSON.stringify({
+                            one_time_keyboard: true,
+                            keyboard: answers
+                        })
+                    });
+                    break;
+                case 'FREE_TEXT':
+                    bot.sendMessage(chatId, question.question);
+                    break;
+                case  'NUMBER':
+                    bot.sendMessage(chatId, question.question);
+                    break;
+                default:
+                    console.log('Unknown response_definition');
+                    bot.sendMessage(chatId, question.question);
+            }
+
+            setState(chatId, 'task_awaiting_answer');
+            //NOTE: no need to make recursive call as the bot will passively await the answer.
+            break;
+        case 'task_awaiting_answer': // waiting for an answer
+            task = getTask(chatId);
+            question = task.questions[getQuestionCounter(chatId)];
+            var valid_answer = false;
+            var response_type = question.response_definition.response_type;
+            var response_select_options = question.response_definition.response_select_options;
+
+            // compare answer with response type and insert in array of answers
+            if (msg.text && response_type === 'NUMBER') {
+                //, vervangen door .
+
+                var text = msg.text.replace(",", ".");
+                console.log(msg.text);
+                console.log(text);
+                if(!isNaN(text)) {
+                    pushAnswer(chatId, msg.text);
+                    valid_answer = true;
+                } else {
+                    valid_answer = false;
+                }
+            } else if (msg.text && response_type === 'FREE_TEXT') {
+                pushAnswer(chatId, msg.text);
+                valid_answer = true;
+            } else if (msg.text && response_type === 'SELECT') {
+                // check if answer is response_select_options
+                if(response_select_options.indexOf(msg.text) === -1){
+                    valid_answer = false;
+                } else {
+                    pushAnswer(chatId, msg.text);
+                    valid_answer = true;
+                }
+            } else if (msg.photo && response_type === 'IMAGE') {
+                pushAnswer(chatId, msg.photo);
+                valid_answer = true;
+            } else {
+                console.log(question.response_definition);
+                valid_answer = false;
+            }
+
+            //if no valid answer was given
+            if(valid_answer === false) {
+                if (response_type === 'SELECT'){
+                    bot.sendMessage(chatId, 'That answer is not valid. Expected format: ' + question.response_definition.response_select_options);
+                    setState(chatId, 'task_ask_question');
+                } else {
+                    bot.sendMessage(chatId, 'That answer is not valid. Expected format: ' + question.response_definition.response_type);
+                    setState(chatId, 'task_ask_question');
+                }
+            }
+            //if there are still questions remaining
+            else if(getQuestionCounter(chatId) < task.questions.length - 1) {
+                incrementQuestionCounter(chatId);
+                setState(chatId, 'task_ask_question');
+            }
+            //if there are no questions remaining
+            else {
+                setState(chatId, 'task_complete');
+            }
+
+            executeState(chatId, msg);
+            break;
+        case 'task_complete': // clean up when task is complete
+            //save the solution to the task
+            saveAnswers(getAnswers(chatId), chatId, getUnit(chatId));
+            bot.sendMessage(chatId, "The task is complete!");
+
+            setState(chatId, 'start');
+            executeState(chatId, msg);
+            break;
+        default:
+            setState(chatId, 'new');
+            executeState(chatId, msg);
+
+    }
+};
+
+// Writes the answers for unit unitId by worker chatId to the database
+const saveAnswers = (answers, chatId, unit) => {
+    unit.solutions.push({
+        responses: answers,
+        reviewed: 'PENDING',
+        user_id: chatId,
+    });
+
+    unit.save(function(err) {
+        if (err)
+            console.error(err);
+        else {
+            console.log("Saved answers successfully!");
+        }
+    });
+};
+
+// Matches /start
+bot.onText(/\/start/, function (msg) {
     var chatId = msg.chat.id;
-    stateTracker[chatId] = 'goodbye';
-    runStateCode(chatId, msg);
+    setState(chatId, 'new');
+    executeState(chatId, msg);
 });
 
 // Matches /choosetask
 bot.onText(/\/choosetask/, function (msg) {
     var chatId = msg.chat.id;
-    msg.text = 'Yes';
-    stateTracker[chatId] = 'greet_pending';
-    runStateCode(chatId, msg);
+    setState(chatId, 'start');
+    executeState(chatId, msg);
 });
 
-// Matches /quit
-bot.onText(/\/quit/, function (msg) {
+// Matches /reset
+bot.onText(/\/reset/, function (msg) {
     var chatId = msg.chat.id;
-
-    if (stateTracker[chatId] === 'task_completion') {
-        msg.text = 'Yes';
-        stateTracker[chatId] = 'greet_pending';
-        runStateCode(chatId, msg);
-    } else {
-        console.log("Saying no to greet_pending");
-        msg.text = 'No';
-        stateTracker[chatId] = 'greet_pending';
-        runStateCode(chatId, msg);
-    }
+    setState(chatId, 'new');
+    bot.sendMessage(chatId, 'I will reboot now!');
+    executeState(chatId, msg);
 });
 
 // Matches /help
 bot.onText(/\/help/, function (msg) {
     var chatId = msg.chat.id;
-    bot.sendMessage(chatId, "I am here to help! You can use any of the following commands to start working.", {
-        reply_markup: JSON.stringify({
-            one_time_keyboard: true,
-            keyboard: [
-                [commands[0]],
-                [commands[1]],
-                [commands[2]],
-                [commands[3]]
-            ]
-        })
-    });
+    setState(chatId, 'help'); //TODO: This state does not exist yet.
+    executeState(chatId, msg);
 });
-
-
-// connect to mongodb
-// var mongoose   = require('mongoose');
-// mongoose.connect('mongodb://localhost:4444'); // connect to database
-// var Task     = require('./app/models/task');
-
-// verify connection to mongodb
-// var conn = mongoose.connection;
-// conn.on('error', console.error.bind(console, 'connection error:'));
-// conn.once('open', function() {
-//   console.log('Connected successfully to MongoDB')
-// });
 
 // API ROUTES
 // =============================================================================

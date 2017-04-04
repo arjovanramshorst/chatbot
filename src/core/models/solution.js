@@ -9,10 +9,9 @@ var Schema = mongoose.Schema;
 var SolutionSchema = new Schema({
     worker_id: String, // Parent is a unit (not a task)
     unit_id: String,
-    responses: [{
-        question_id: String, // Each task question contains its own id. There is no schema for this.
-        response: Schema.Types.Mixed
-    }],
+    task_id: String,
+    responses: [],
+    review: String,
 });
 
 module.exports = mongoose.model('Solution', SolutionSchema);
