@@ -9,6 +9,7 @@ var bodyParser = require('body-parser');
 var app = express();
 var morgan = require('morgan');
 var request = require('request');
+
 var Tgfancy = require("tgfancy");
 
 var Task = require('../core/models/task');
@@ -150,16 +151,16 @@ var executeState = function(chatId, msg) {
                     setState(chatId, 'task_choice_pending');
 
                     // fill the task_names array
-                    task_names = [];
+                    taskNames = [];
                     tasks.forEach(function (task) {
-                        task_names.push([task.name]);
+                        taskNames.push([task.name]);
                     });
 
                     // Send message to the worker
                     bot.sendMessage(chatId, "What task would you like to do?", {
                         reply_markup: JSON.stringify({
                             one_time_keyboard: true,
-                            keyboard: task_names
+                            keyboard: taskNames
                         })
                     });
                 }
@@ -315,7 +316,7 @@ var saveAnswers = function (answers, chatId, taskId, unitId) {
             console.log("Saved answers successfully!");
         }
     })
-}
+};
 
 // Matches /start
 bot.onText(/\/start/, function (msg) {
