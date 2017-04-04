@@ -3,22 +3,22 @@ var Twitter = require('twitter-node-client').Twitter;
 /**
  * Harcoded task id. Should be known to the user (requester) and can therefore be hardcoded.
  */
-const existing_task_id = '58e29d01c7882000261414f3';
-const task_units_url = 'http://localhost:3333/api/tasks/' + existing_task_id + '/units';
+const existingTaskId = '58e29d01c7882000261414f3';
+const taskUnitsUrl = 'http://localhost:3333/api/tasks/' + existingTaskId + '/units';
 
 /**
  * Twitter configurations
  */
-var config = {
+const config = {
     "consumerKey": "Fqza8FljBeMEqUfqb7sEAKjly",
     "consumerSecret": "qVuDFsKmPkTJIO9v7CwTa9IZtPeEBTxqqp26yCzO22w0QXeBxI",
     "accessToken": "793447190127665156-M7a6C8MrQBndspJ8U2fH6jzrZzaEQBc",
     "accessTokenSecret": "t2DZ9VvgzeMHBGxGxUl8eoOSkmBAdzzeoQPeMeDEUruQo"
 };
-var twitter = new Twitter(config);
+const twitter = new Twitter(config);
 
 // Process unit to check if we should add it to new units.
-var validateTweetText = (text) => {
+const validateTweetText = (text) => {
     required_words = [
         'obama',
         'obamacare',
@@ -32,7 +32,7 @@ var validateTweetText = (text) => {
     return false
 };
 
-var data = twitter.getUserTimeline({
+const data = twitter.getUserTimeline({
     screen_name: 'realDonaldTrump',
     count: 1000
 }, function() {
@@ -42,43 +42,39 @@ var data = twitter.getUserTimeline({
 }, function(data) {
     const json_result = JSON.parse(data);
 
-    request(task_units_url, function(error, response, body) {
+    request(taskUnitsUrl, function(error, response, body) {
         if (!error) {
-            const current_units = JSON.parse(body);
-            // Check for tweet ids currently in database.
-            const existing_tweet_ids = [];
+            const currentUnits = JSON.parse(body);
+            const existingTweetIds = [];
+            const newUnits = []
 
-            for (var i = 0; i < current_units.length; i++) {
-                const existing_id = current_units[i].content.tweet_id
-                existing_tweet_ids.push(existing_id)
+            // Check which ones are already in the database
+            for (var i = 0; i < currentUnits.length; i++) {
+                const existingId = currentUnits[i].content.tweet_id
+                existingTweetIds.push(existingId)
             }
 
             // Add tweets which are not yet in the database
-            const new_units = []
             for (var i = 0; i < json_result.length; i++) {
                 const id = json_result[i].id_str;
                 const text = json_result[i].text;
 
-                if (existing_tweet_ids.indexOf(id) < 0) {
-
+                if (existingTweetIds.indexOf(id) < 0) {
                     if (validateTweetText(text)) {
-                        new_units.push({
+                        newUnits.push({
                             content: {
                                 tweet_id: id,
                                 tweet_text: text
                             }
                         });
                     }
-
-
                 }
             }
-            console.log('new: ' + new_units)
 
-            for (var i = 0; i < new_units.length; i++) {
+            for (var i = 0; i < newUnits.length; i++) {
                 request.post({
-                    url: task_units_url,
-                    form: new_units[i]
+                    url: taskUnitsUrl,
+                    form: newUnits[i]
                 }, function optionalCallback(err, httpResponse, body) {
                     if (err) {
                         return console.error('Failed to add tweet:', err);
@@ -89,9 +85,8 @@ var data = twitter.getUserTimeline({
 
             console.log({
                 'message': 'Successful insert!',
-                'new units length': new_units.length,
-                'new units': new_units
-            })
+                'new units length': newUnits.length,
+            });
         } else {
             console.error(error)
         }
