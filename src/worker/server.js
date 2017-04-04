@@ -261,7 +261,11 @@ var executeState = function(chatId, msg) {
             // compare answer with response type and insert in array of answers
             if (msg.text && response_type === 'NUMBER') {
                 //, vervangen door .
-                if(!isNaN(msg.text)) {
+
+                var text = msg.text.replace(",", ".");
+                console.log(msg.text);
+                console.log(text);
+                if(!isNaN(text)) {
                     pushAnswer(chatId, msg.text);
                     valid_answer = true;
                 } else {
@@ -288,8 +292,13 @@ var executeState = function(chatId, msg) {
 
             //if no valid answer was given
             if(valid_answer === false) {
-                bot.sendMessage(chatId, 'That answer is not valid. Expected format: ' + question.response_definition.response_type);
-                setState(chatId, 'task_ask_question');
+                if (response_type === 'SELECT'){
+                    bot.sendMessage(chatId, 'That answer is not valid. Expected format: ' + question.response_definition.response_select_options);
+                    setState(chatId, 'task_ask_question');
+                } else {
+                    bot.sendMessage(chatId, 'That answer is not valid. Expected format: ' + question.response_definition.response_type);
+                    setState(chatId, 'task_ask_question');
+                }
             }
             //if there are still questions remaining
             else if(getQuestionCounter(chatId) < task.questions.length - 1) {
