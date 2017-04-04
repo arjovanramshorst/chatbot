@@ -1,13 +1,11 @@
 var request = require('request');
 var json2csv = require('json2csv');
 var fs = require('fs');
-
 /**
  * Harcoded task id. Should be known to the user (requester) and can therefore be hardcoded.
  */
 const existingTaskId = '58e29d01c7882000261414f3';
 const taskUnitsUrl = 'http://localhost:3333/api/tasks/' + existingTaskId + '/units';
-
 
 
 request(taskUnitsUrl, function(error, response, body) {

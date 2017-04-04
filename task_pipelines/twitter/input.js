@@ -25,7 +25,7 @@ const validateTweetText = (text) => {
         'president'
     ];
     for (var i = 0; i < required_words.length; i++) {
-        if (text.toLowerCase().indexOf(required_words[i]) > -1) {
+        if (text.toLowerCase().indexOf(required_words[i]) !== -1) {
             return true
         }
     }
@@ -46,7 +46,7 @@ const data = twitter.getUserTimeline({
         if (!error) {
             const currentUnits = JSON.parse(body);
             const existingTweetIds = [];
-            const newUnits = []
+            const newUnits = [];
 
             // Check which ones are already in the database
             for (var i = 0; i < currentUnits.length; i++) {
@@ -59,7 +59,7 @@ const data = twitter.getUserTimeline({
                 const id = json_result[i].id_str;
                 const text = json_result[i].text;
 
-                if (existingTweetIds.indexOf(id) < 0) {
+                if (existingTweetIds.indexOf(id) === -1) {
                     if (validateTweetText(text)) {
                         newUnits.push({
                             content: {
