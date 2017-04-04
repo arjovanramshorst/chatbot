@@ -9,7 +9,7 @@ var bodyParser = require('body-parser');
 var app = express();
 var morgan = require('morgan');
 var request = require('request');
-var TelegramBot = require('node-telegram-bot-api');
+var Tgfancy = require("tgfancy");
 
 var Task = require('../core/models/task');
 var Unit = require('../core/models/unit');
@@ -27,10 +27,10 @@ var port = /*process.env.PORT || */ 3000;
 
 /* ========== TELEGRAM SETUP ============= */
 // replace the value below with the Telegram token you receive from @BotFather 
-var token = '334665274:AAHal-GI-g_Os4OiSOQ04D7h1pUY_98Slgo';
+var token = '295147674:AAERxZjce89nISZpVfBMbyJDK6FIHE8u1Zw';
 
 // Create a bot that uses 'polling' to fetch new updates
-var bot = new TelegramBot(token, {polling: true});
+var bot = new Tgfancy(token, {polling: true, orderedSending: true});
 
 /* ========== MONGODB SETUP ============= */
 // connect to mongodb
