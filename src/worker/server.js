@@ -48,10 +48,10 @@ conn.once('open', function () {
 /* ======================= */
 
 var stateTracker = {};
-var lastTask = {};
+var activeTask = {};
+var activeUnit = {};
 var questionCounter = {};
-var currentAnswers = {};
-var currentUnit = {};
+var activeTaskAnswers = {};
 
 var commands = [
     '/begin',
@@ -68,20 +68,35 @@ var setState = function(chatId, state) {
     stateTracker[chatId] = state;
 };
 
-var getActiveTask = function(chatId) {
-    return lastTask[chatId];
+var getTask = function(chatId) {
+    return activeTask[chatId];
 };
 
-var setActiveTask = function(chatId, unit) {
-    lastTask[chatId] = unit;
+var setTask = function(chatId, unit) {
+    activeTask[chatId] = unit;
 };
 
-var getActiveUnit = function(chatId) {
-    return currentUnit[chatId];
+var getUnit = function(chatId) {
+    return activeUnit[chatId];
 };
 
-var setActiveUnit = function(chatId, unit) {
-    currentUnit[chatId] = unit;
+var setUnit = function(chatId, unit) {
+    activeUnit[chatId] = unit;
+};
+
+var pushAnswer = function(chatId, answer) {
+    if(chatId in activeTaskAnswers === false) {
+        activeTaskAnswers[chatId] = [];
+    }
+    activeTaskAnswers[chatId].push(answer);
+};
+
+var getAnswers = function(chatId) {
+    if(chatId in activeTaskAnswers) {
+        return activeTaskAnswers[chatId];
+    } else {
+        return [];
+    }
 };
 
 var initQuestionCounter = function(chatId) {
@@ -94,21 +109,6 @@ var incrementQuestionCounter = function(chatId) {
 
 var getQuestionCounter = function(chatId) {
     return questionCounter[chatId];
-};
-
-var pushAnswer = function(chatId, answer) {
-    if(chatId in currentAnswers === false) {
-        currentAnswers[chatId] = [];
-    }
-    currentAnswers[chatId].push(answer);
-};
-
-var getAnswers = function(chatId) {
-    if(chatId in currentAnswers) {
-        return currentAnswers[chatId];
-    } else {
-        return [];
-    }
 };
 
 // Listen for any kind of message. There are different kinds of messages.
@@ -176,7 +176,7 @@ var executeState = function(chatId, msg) {
                 tasks.forEach(function (task) {
                     if (msg.text === task.name) {
                         found = true;
-                        setActiveTask(chatId, task);
+                        setTask(chatId, task);
                     }
                 });
 
@@ -191,11 +191,11 @@ var executeState = function(chatId, msg) {
             });
             break;
         case 'task_init': // sending data from unit
-            task = getActiveTask(chatId);
+            task = getTask(chatId);
 
             Unit.findOne({task_id: task._id}, function (err, unit) {
                 initQuestionCounter(chatId);
-                setActiveUnit(chatId, unit);
+                setUnit(chatId, unit);
 
                 // process all unit content
                 switch (task.content_definition.content_type) {
@@ -218,7 +218,7 @@ var executeState = function(chatId, msg) {
             });
             break;
         case 'task_ask_question': // asking a question
-            task = getActiveTask(chatId);
+            task = getTask(chatId);
             question = task.questions[getQuestionCounter(chatId)];
 
             // ask the question
@@ -251,7 +251,7 @@ var executeState = function(chatId, msg) {
             //NOTE: no need to make recursive call as the bot will passively await the answer.
             break;
         case 'task_awaiting_answer': // waiting for an answer
-            task = getActiveTask(chatId);
+            task = getTask(chatId);
             question = task.questions[getQuestionCounter(chatId)];
             var valid_answer = false;
 
@@ -286,7 +286,7 @@ var executeState = function(chatId, msg) {
             break;
         case 'task_complete': // clean up when task is complete
             //save the solution to the task
-            saveAnswers(getAnswers(chatId), chatId, getActiveTask(chatId)._id, getActiveUnit(chatId)._id);
+            saveAnswers(getAnswers(chatId), chatId, getTask(chatId)._id, getUnit(chatId)._id);
             bot.sendMessage(chatId, "The task is complete!");
 
             setState(chatId, 'start');
