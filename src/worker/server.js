@@ -9,7 +9,8 @@ var bodyParser = require('body-parser');
 var app = express();
 var morgan = require('morgan');
 var request = require('request');
-var TelegramBot = require('node-telegram-bot-api');
+
+var Tgfancy = require("tgfancy");
 
 var Task = require('../core/models/task');
 var Unit = require('../core/models/unit');
@@ -28,9 +29,10 @@ var port = /*process.env.PORT || */ 3000;
 /* ========== TELEGRAM SETUP ============= */
 // replace the value below with the Telegram token you receive from @BotFather 
 var token = '295147674:AAERxZjce89nISZpVfBMbyJDK6FIHE8u1Zw';
+//var token = '334665274:AAHal-GI-g_Os4OiSOQ04D7h1pUY_98Slgo';
 
 // Create a bot that uses 'polling' to fetch new updates
-var bot = new TelegramBot(token, {polling: true});
+var bot = new Tgfancy(token, {polling: true, orderedSending: true});
 
 /* ========== MONGODB SETUP ============= */
 // connect to mongodb
@@ -47,12 +49,13 @@ conn.once('open', function () {
 /* ======================= */
 
 var stateTracker = {};
-var lastTask = {};
+var activeTask = {};
+var activeUnit = {};
 var questionCounter = {};
-var currentAnswers = {};
-var currentUnit = {};
+var activeTaskAnswers = {};
 
-var commands = ['/begin',
+var commands = [
+    '/begin',
     '/quit',
     '/choosetask',
     '/help'
@@ -66,24 +69,77 @@ var setState = function(chatId, state) {
     stateTracker[chatId] = state;
 };
 
-var getActiveTask = function(chatId) {
-    return lastTask[chatId];
+var getTask = function(chatId) {
+    return activeTask[chatId];
 };
 
-var setActiveTask = function(chatId, unit) {
-    lastTask[chatId] = unit;
+var setTask = function(chatId, unit) {
+    activeTask[chatId] = unit;
 };
 
-var getActiveUnit = function(chatId) {
-    return currentUnit[chatId];
+var getUnit = function(chatId) {
+    return activeUnit[chatId];
 };
 
-var setActiveUnit = function(chatId, unit) {
-    currentUnit[chatId] = unit;
+var setUnit = function(chatId, unit) {
+    activeUnit[chatId] = unit;
 };
 
-// Listen for any kind of message. There are different kinds of
-// messages.
+var pushAnswer = function(chatId, answer) {
+    if(chatId in activeTaskAnswers === false) {
+        activeTaskAnswers[chatId] = [];
+    }
+    activeTaskAnswers[chatId].push(answer);
+};
+
+var getAnswers = function(chatId) {
+    if(chatId in activeTaskAnswers) {
+        return activeTaskAnswers[chatId];
+    } else {
+        return [];
+    }
+};
+
+var initQuestionCounter = function(chatId) {
+    questionCounter[chatId] = 0;
+};
+
+var incrementQuestionCounter = function(chatId) {
+    questionCounter[chatId] += 1;
+};
+
+var getQuestionCounter = function(chatId) {
+    return questionCounter[chatId];
+};
+
+const fetchTasks = (query = {}) => {
+    return new Promise((resolve, reject) => {
+        Task.find(query, function (err, tasks) {
+            if (tasks.length > 0) {
+                resolve(tasks);
+            } else if (tasks.length === 0) {
+                reject();
+            }
+        });
+    });
+}
+
+const fetchTask = (query = {}) => {
+    return new Promise((resolve, reject) => {
+        Task.findOne(query, (err, task) => {
+            if(err) {
+                reject(err)
+            } else {
+                resolve(task)
+            }
+        })
+    })
+}
+
+const fetchTaskByName = (name) => fetchTask({name: name});
+
+
+// Listen for any kind of message. There are different kinds of messages.
 bot.on('message', function (msg) {
     if (commands.indexOf(msg.text) === -1) {
         var chatId = msg.chat.id;
@@ -113,62 +169,40 @@ var executeState = function(chatId, msg) {
             executeState(chatId, msg);
             break;
         case 'start': // provides an overview of tasks
+            fetchTasks().then(tasks => {
+                setState(chatId, 'task_choice_pending');
 
-            Task.find({}, function (err, tasks) {
+                const taskNames = tasks.map(task => task.name)
 
-                // If there are tasks
-                if(tasks.length > 0) {
-                    // set the new state
-                    setState(chatId, 'task_choice_pending');
+                bot.sendMessage(chatId, "What task would you like to do?", {
+                    reply_markup: JSON.stringify({
+                        one_time_keyboard: true,
+                        keyboard: taskNames
+                    })
+                });
 
-                    // fill the task_names array
-                    task_names = [];
-                    tasks.forEach(function (task) {
-                        task_names.push([task.name]);
-                    });
-
-                    // Send message to the worker
-                    bot.sendMessage(chatId, "What task would you like to do?", {
-                        reply_markup: JSON.stringify({
-                            one_time_keyboard: true,
-                            keyboard: task_names
-                        })
-                    });
-                }
-                // If there are no tasks
-                else {
-                    bot.sendMessage(chatId, "Hi there! I am Bucky. There are no tasks available at the moment. Come back later!");
-                }
+            }).catch(() => {
+                bot.sendMessage(chatId, "Hi there! I am Bucky. There are no tasks available at the moment. Come back later!");
             });
             //NOTE: no need to make recursive call as the bot will passively await the answer.
             break;
         case 'task_choice_pending': // waiting for user to select task
-            Task.find({}, function (err, tasks) {
-                var found = false;
-                tasks.forEach(function (task) {
-                    if (msg.text === task.name) {
-                        found = true;
-                        setActiveTask(chatId, task);
-                    }
-                });
-
-                if(found) {
-                    setState(chatId, 'task_init');
-                } else {
-                    bot.sendMessage(chatId, "Sorry, but I do not know that task.");
-                    setState(chatId, 'start');
-                }
-
+            fetchTaskByName(msg.text).then(result => {
+                setTask(chatId, result);
+                setState(chatId, 'task_init');
+                executeState(chatId, msg)
+            }).catch(err => {
+                bot.sendMessage(chatId, "Sorry, but I do not know that task.");
+                setState(chatId, 'start');
                 executeState(chatId, msg);
             });
             break;
         case 'task_init': // sending data from unit
-            task = getActiveTask(chatId);
+            task = getTask(chatId);
 
             Unit.findOne({task_id: task._id}, function (err, unit) {
-                questionCounter[chatId] = 0;
-                currentAnswers[chatId] = [];
-                setActiveUnit(chatId, unit);
+                initQuestionCounter(chatId);
+                setUnit(chatId, unit);
 
                 // process all unit content
                 switch (task.content_definition.content_type) {
@@ -191,8 +225,8 @@ var executeState = function(chatId, msg) {
             });
             break;
         case 'task_ask_question': // asking a question
-            task = getActiveTask(chatId);
-            question = task.questions[questionCounter[chatId]];
+            task = getTask(chatId);
+            question = task.questions[getQuestionCounter(chatId)];
 
             // ask the question
             switch (question.response_definition.response_type) {
@@ -224,19 +258,20 @@ var executeState = function(chatId, msg) {
             //NOTE: no need to make recursive call as the bot will passively await the answer.
             break;
         case 'task_awaiting_answer': // waiting for an answer
-            task = getActiveTask(chatId);
-            question = task.questions[questionCounter[chatId]];
+            task = getTask(chatId);
+            question = task.questions[getQuestionCounter(chatId)];
             var valid_answer = false;
 
             // compare answer with response type and insert in array of answers
             if (msg.text && question.response_definition !== 'IMAGE') {
-                currentAnswers[chatId].push(msg.text);
+                pushAnswer(chatId, msg.text);
                 valid_answer = true;
             } else if (msg.photo && question.response_definition === 'IMAGE') {
-                currentAnswers[chatId].push(msg.photo);
+                pushAnswer(chatId, msg.photo);
                 valid_answer = true;
             } else {
-                bot.sendMessage(chatId, 'That answer is not valid. Expected format: ' + question.response_definition);
+                console.log(question.response_definition);
+                bot.sendMessage(chatId, 'That answer is not valid. Expected format: ' + question.response_definition.response_type);
                 valid_answer = false;
             }
 
@@ -245,8 +280,8 @@ var executeState = function(chatId, msg) {
                 setState(chatId, 'task_ask_question');
             }
             //if there are still questions remaining
-            else if(questionCounter[chatId] < task.questions.length - 1) {
-                questionCounter[chatId] += 1;
+            else if(getQuestionCounter(chatId) < task.questions.length - 1) {
+                incrementQuestionCounter(chatId);
                 setState(chatId, 'task_ask_question');
             }
             //if there are no questions remaining
@@ -258,7 +293,7 @@ var executeState = function(chatId, msg) {
             break;
         case 'task_complete': // clean up when task is complete
             //save the solution to the task
-            saveAnswers(currentAnswers[chatId], chatId, getActiveTask(chatId)._id, getActiveUnit(chatId)._id);
+            saveAnswers(getAnswers(chatId), chatId, getTask(chatId)._id, getUnit(chatId)._id);
             bot.sendMessage(chatId, "The task is complete!");
 
             setState(chatId, 'start');
@@ -287,12 +322,19 @@ var saveAnswers = function (answers, chatId, taskId, unitId) {
             console.log("Saved answers successfully!");
         }
     })
-}
+};
+
+// Matches /start
+bot.onText(/\/start/, function (msg) {
+    var chatId = msg.chat.id;
+    setState(chatId, 'new');
+    executeState(chatId, msg);
+});
 
 // Matches /choosetask
 bot.onText(/\/choosetask/, function (msg) {
     var chatId = msg.chat.id;
-    setState(chatId, 'begin');
+    setState(chatId, 'start');
     executeState(chatId, msg);
 });
 
