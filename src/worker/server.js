@@ -27,7 +27,7 @@ var port = /*process.env.PORT || */ 3000;
 
 /* ========== TELEGRAM SETUP ============= */
 // replace the value below with the Telegram token you receive from @BotFather 
-var token = '295147674:AAERxZjce89nISZpVfBMbyJDK6FIHE8u1Zw';
+var token = '334665274:AAHal-GI-g_Os4OiSOQ04D7h1pUY_98Slgo';
 
 // Create a bot that uses 'polling' to fetch new updates
 var bot = new TelegramBot(token, {polling: true});
