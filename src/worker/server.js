@@ -84,6 +84,18 @@ var setActiveUnit = function(chatId, unit) {
     currentUnit[chatId] = unit;
 };
 
+var initQuestionCounter = function(chatId) {
+    questionCounter[chatId] = 0;
+};
+
+var incrementQuestionCounter = function(chatId) {
+    questionCounter[chatId] += 1;
+};
+
+var getQuestionCounter = function(chatId) {
+    return questionCounter[chatId];
+};
+
 var pushAnswer = function(chatId, answer) {
     if(chatId in currentAnswers === false) {
         currentAnswers[chatId] = [];
@@ -99,8 +111,7 @@ var getAnswers = function(chatId) {
     }
 };
 
-// Listen for any kind of message. There are different kinds of
-// messages.
+// Listen for any kind of message. There are different kinds of messages.
 bot.on('message', function (msg) {
     if (commands.indexOf(msg.text) === -1) {
         var chatId = msg.chat.id;
@@ -183,7 +194,7 @@ var executeState = function(chatId, msg) {
             task = getActiveTask(chatId);
 
             Unit.findOne({task_id: task._id}, function (err, unit) {
-                questionCounter[chatId] = 0;
+                initQuestionCounter(chatId);
                 setActiveUnit(chatId, unit);
 
                 // process all unit content
@@ -208,7 +219,7 @@ var executeState = function(chatId, msg) {
             break;
         case 'task_ask_question': // asking a question
             task = getActiveTask(chatId);
-            question = task.questions[questionCounter[chatId]];
+            question = task.questions[getQuestionCounter(chatId)];
 
             // ask the question
             switch (question.response_definition.response_type) {
@@ -241,7 +252,7 @@ var executeState = function(chatId, msg) {
             break;
         case 'task_awaiting_answer': // waiting for an answer
             task = getActiveTask(chatId);
-            question = task.questions[questionCounter[chatId]];
+            question = task.questions[getQuestionCounter(chatId)];
             var valid_answer = false;
 
             // compare answer with response type and insert in array of answers
@@ -252,7 +263,8 @@ var executeState = function(chatId, msg) {
                 pushAnswer(chatId, msg.photo);
                 valid_answer = true;
             } else {
-                bot.sendMessage(chatId, 'That answer is not valid. Expected format: ' + question.response_definition);
+                console.log(question.response_definition);
+                bot.sendMessage(chatId, 'That answer is not valid. Expected format: ' + question.response_definition.response_type);
                 valid_answer = false;
             }
 
@@ -261,8 +273,8 @@ var executeState = function(chatId, msg) {
                 setState(chatId, 'task_ask_question');
             }
             //if there are still questions remaining
-            else if(questionCounter[chatId] < task.questions.length - 1) {
-                questionCounter[chatId] += 1;
+            else if(getQuestionCounter(chatId) < task.questions.length - 1) {
+                incrementQuestionCounter(chatId);
                 setState(chatId, 'task_ask_question');
             }
             //if there are no questions remaining
@@ -315,7 +327,7 @@ bot.onText(/\/start/, function (msg) {
 // Matches /choosetask
 bot.onText(/\/choosetask/, function (msg) {
     var chatId = msg.chat.id;
-    setState(chatId, 'begin');
+    setState(chatId, 'start');
     executeState(chatId, msg);
 });
 
