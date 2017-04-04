@@ -19,20 +19,17 @@ var twitter = new Twitter(config);
 
 // Process unit to check if we should add it to new units.
 var validateTweetText = (text) => {
-
     required_words = [
         'obama',
         'obamacare',
         'president'
     ];
-
     for (var i = 0; i < required_words.length; i++) {
         if (text.toLowerCase().indexOf(required_words[i]) > -1) {
             return true
         }
     }
     return false
-
 };
 
 var data = twitter.getUserTimeline({
