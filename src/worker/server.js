@@ -28,8 +28,8 @@ var port = /*process.env.PORT || */ 3000;
 
 /* ========== TELEGRAM SETUP ============= */
 // replace the value below with the Telegram token you receive from @BotFather 
-var token = '295147674:AAERxZjce89nISZpVfBMbyJDK6FIHE8u1Zw';
-//var token = '334665274:AAHal-GI-g_Os4OiSOQ04D7h1pUY_98Slgo';
+//var token = '295147674:AAERxZjce89nISZpVfBMbyJDK6FIHE8u1Zw';
+var token = '334665274:AAHal-GI-g_Os4OiSOQ04D7h1pUY_98Slgo';
 
 // Create a bot that uses 'polling' to fetch new updates
 var bot = new Tgfancy(token, {polling: true, orderedSending: true});
@@ -255,22 +255,40 @@ var executeState = function(chatId, msg) {
             task = getTask(chatId);
             question = task.questions[getQuestionCounter(chatId)];
             var valid_answer = false;
+            var response_type = question.response_definition.response_type;
+            var response_select_options = question.response_definition.response_select_options;
 
             // compare answer with response type and insert in array of answers
-            if (msg.text && question.response_definition !== 'IMAGE') {
+            if (msg.text && response_type === 'NUMBER') {
+                //, vervangen door .
+                if(!isNaN(msg.text)) {
+                    pushAnswer(chatId, msg.text);
+                    valid_answer = true;
+                } else {
+                    valid_answer = false;
+                }
+            } else if (msg.text && response_type === 'FREE_TEXT') {
                 pushAnswer(chatId, msg.text);
                 valid_answer = true;
-            } else if (msg.photo && question.response_definition === 'IMAGE') {
+            } else if (msg.text && response_type === 'SELECT') {
+                // check if answer is response_select_options
+                if(response_select_options.indexOf(msg.text) === -1){
+                    valid_answer = false;
+                } else {
+                    pushAnswer(chatId, msg.text);
+                    valid_answer = true;
+                }
+            } else if (msg.photo && response_type === 'IMAGE') {
                 pushAnswer(chatId, msg.photo);
                 valid_answer = true;
             } else {
                 console.log(question.response_definition);
-                bot.sendMessage(chatId, 'That answer is not valid. Expected format: ' + question.response_definition.response_type);
                 valid_answer = false;
             }
 
             //if no valid answer was given
             if(valid_answer === false) {
+                bot.sendMessage(chatId, 'That answer is not valid. Expected format: ' + question.response_definition.response_type);
                 setState(chatId, 'task_ask_question');
             }
             //if there are still questions remaining
