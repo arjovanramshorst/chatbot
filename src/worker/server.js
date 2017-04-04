@@ -28,6 +28,7 @@ var port = /*process.env.PORT || */ 3000;
 /* ========== TELEGRAM SETUP ============= */
 // replace the value below with the Telegram token you receive from @BotFather 
 var token = '295147674:AAERxZjce89nISZpVfBMbyJDK6FIHE8u1Zw';
+//var token = '334665274:AAHal-GI-g_Os4OiSOQ04D7h1pUY_98Slgo';
 
 // Create a bot that uses 'polling' to fetch new updates
 var bot = new Tgfancy(token, {polling: true, orderedSending: true});
@@ -52,7 +53,8 @@ var questionCounter = {};
 var currentAnswers = {};
 var currentUnit = {};
 
-var commands = ['/begin',
+var commands = [
+    '/begin',
     '/quit',
     '/choosetask',
     '/help'
@@ -80,6 +82,21 @@ var getActiveUnit = function(chatId) {
 
 var setActiveUnit = function(chatId, unit) {
     currentUnit[chatId] = unit;
+};
+
+var pushAnswer = function(chatId, answer) {
+    if(chatId in currentAnswers === false) {
+        currentAnswers[chatId] = [];
+    }
+    currentAnswers[chatId].push(answer);
+};
+
+var getAnswers = function(chatId) {
+    if(chatId in currentAnswers) {
+        return currentAnswers[chatId];
+    } else {
+        return [];
+    }
 };
 
 // Listen for any kind of message. There are different kinds of
@@ -167,7 +184,6 @@ var executeState = function(chatId, msg) {
 
             Unit.findOne({task_id: task._id}, function (err, unit) {
                 questionCounter[chatId] = 0;
-                currentAnswers[chatId] = [];
                 setActiveUnit(chatId, unit);
 
                 // process all unit content
@@ -230,10 +246,10 @@ var executeState = function(chatId, msg) {
 
             // compare answer with response type and insert in array of answers
             if (msg.text && question.response_definition !== 'IMAGE') {
-                currentAnswers[chatId].push(msg.text);
+                pushAnswer(chatId, msg.text);
                 valid_answer = true;
             } else if (msg.photo && question.response_definition === 'IMAGE') {
-                currentAnswers[chatId].push(msg.photo);
+                pushAnswer(chatId, msg.photo);
                 valid_answer = true;
             } else {
                 bot.sendMessage(chatId, 'That answer is not valid. Expected format: ' + question.response_definition);
@@ -258,7 +274,7 @@ var executeState = function(chatId, msg) {
             break;
         case 'task_complete': // clean up when task is complete
             //save the solution to the task
-            saveAnswers(currentAnswers[chatId], chatId, getActiveTask(chatId)._id, getActiveUnit(chatId)._id);
+            saveAnswers(getAnswers(chatId), chatId, getActiveTask(chatId)._id, getActiveUnit(chatId)._id);
             bot.sendMessage(chatId, "The task is complete!");
 
             setState(chatId, 'start');
@@ -288,6 +304,13 @@ var saveAnswers = function (answers, chatId, taskId, unitId) {
         }
     })
 }
+
+// Matches /start
+bot.onText(/\/start/, function (msg) {
+    var chatId = msg.chat.id;
+    setState(chatId, 'new');
+    executeState(chatId, msg);
+});
 
 // Matches /choosetask
 bot.onText(/\/choosetask/, function (msg) {
