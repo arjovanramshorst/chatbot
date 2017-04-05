@@ -9,6 +9,7 @@ router.get('/reset-and-seed', function (req, res) {
     removeAllTasks();
     addImageListTask(res)
     addSentimentTask(res)
+    addLocalFilesTask(res)
 });
 
 var removeAllTasks = () => {
@@ -121,6 +122,48 @@ var addSentimentTask = (res) => {
             res.send(err);
         else
             console.log('sentiment twitter seeded')
+    });
+}
+
+var addLocalFilesTask = (res) => {
+    var task = new Task();
+    task.name = 'Some local folder images task for pipeline';
+    task.requester_id = 'whateveridfromsomerequesterinstring';
+    task.content_definition.content_type = 'IMAGE_LIST';
+    task.content_definition.content_fields = {
+        'image_1': 'content.image_url',
+    };
+    task.questions = [{
+        question: 'What do you think of the image shown?',
+        response_definition: {
+            'response_type': 'SELECT',
+            'response_select_options': [
+                'nice', 'awful'
+            ]
+        }
+    }];
+
+    images = [
+        {'image_url': 'https://www.dropbox.com/s/49e0ij21awcaqx4/trump2.jpg?dl=0'},
+        {'image_url': 'https://www.dropbox.com/s/pht7c0fp5sjgol9/trump3.jpg?dl=0'}
+    ];
+
+    for (var i = 0; i < images.length; i++) {
+        var unit = new Unit();
+        unit.task_id = task.id;
+        unit.content = images[i];
+
+        unit.save(function (err) {
+            if (err)
+                res.send(err);
+        });
+    }
+
+    task.save(function (err) {
+        if (err)
+            res.send(err);
+        else
+            console.log('local images twitter seeded')
     });
 }
 
