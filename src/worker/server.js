@@ -28,8 +28,8 @@ var port = /*process.env.PORT || */ 3000;
 
 /* ========== TELEGRAM SETUP ============= */
 // replace the value below with the Telegram token you receive from @BotFather 
-var token = '295147674:AAERxZjce89nISZpVfBMbyJDK6FIHE8u1Zw';
-// var token = '334665274:AAHal-GI-g_Os4OiSOQ04D7h1pUY_98Slgo';
+// var token = '295147674:AAERxZjce89nISZpVfBMbyJDK6FIHE8u1Zw';
+var token = '334665274:AAHal-GI-g_Os4OiSOQ04D7h1pUY_98Slgo';
 
 // Create a bot that uses 'polling' to fetch new updates
 var bot = new Tgfancy(token, {polling: true, orderedSending: true});
@@ -167,6 +167,13 @@ var executeState = function(chatId, msg) {
             setState(chatId, 'start');
             executeState(chatId, msg);
             break;
+        case 'help':
+            bot.sendMessage(chatId, "Bucky makes it possible to do microwork, whether you are on the go or when you have more time. "
+                + "A list of possible types of tasks is presented. If you select one of the types of tasks, then you can complete "
+                + "them in return for a monetary compensation. When you are done, you can simply exit the chat.");
+            setState(chatId, 'start');
+            executeState(chatId, msg);
+            break;
         case 'start': // provides an overview of tasks
             fetchTasks().then(tasks => {
                 setState(chatId, 'task_choice_pending');
@@ -265,11 +272,8 @@ var executeState = function(chatId, msg) {
 
             // compare answer with response type and insert in array of answers
             if (msg.text && response_type === 'NUMBER') {
-                //, vervangen door .
-
+                // replace , by . zo check more options of a number input
                 var text = msg.text.replace(",", ".");
-                console.log(msg.text);
-                console.log(text);
                 if(!isNaN(text)) {
                     pushAnswer(chatId, msg.text);
                     valid_answer = true;
@@ -280,7 +284,7 @@ var executeState = function(chatId, msg) {
                 pushAnswer(chatId, msg.text);
                 valid_answer = true;
             } else if (msg.text && response_type === 'SELECT') {
-                // check if answer is response_select_options
+                // check if answer is contained in response_select_options
                 if(response_select_options.indexOf(msg.text) === -1){
                     valid_answer = false;
                 } else {
