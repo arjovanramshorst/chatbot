@@ -11,6 +11,7 @@ var SolutionSchema = new Schema({
     unit_id: String,
     task_id: String,
     responses: [],
+    review: String,
 });
 
 module.exports = mongoose.model('Solution', SolutionSchema);

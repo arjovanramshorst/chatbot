@@ -18,6 +18,7 @@ var TaskSchema = new Schema({
         question: String,
         response_definition: Object
     }],
+    requires_review: { type: Boolean, default: true }
 });
 
 module.exports = mongoose.model('Task', TaskSchema);

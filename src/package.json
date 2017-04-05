@@ -17,6 +17,7 @@
     "morgan": "~1.0.0",
     "node-telegram-bot-api": "^0.27.0",
     "request": "^2.81.0",
+    "tgfancy": "^0.9.0",
     "twitter-node-client": "0.0.6"
   }
 }
