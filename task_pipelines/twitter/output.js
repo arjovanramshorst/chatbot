@@ -7,6 +7,10 @@ var fs = require('fs');
 const existingTaskId = '58e29d01c7882000261414f3';
 const taskUnitsUrl = 'http://localhost:3333/api/tasks/' + existingTaskId + '/units';
 
+/*
+* TODO: Add solutions to the output.
+* TODO: Aggregate solutions to something like certainty score.
+*/
 
 request(taskUnitsUrl, function(error, response, body) {
     if (!error) {

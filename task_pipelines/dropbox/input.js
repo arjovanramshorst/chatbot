@@ -8,6 +8,10 @@ var dbx = new Dropbox({accessToken: 'PUTNQdITp2UAAAAAAAASr04_JGUMS4kULPe9DU3LvNr
 const existingTaskId = '58e53d116ba451013a5081c2';
 const taskUnitsUrl = 'http://localhost:3333/api/tasks/' + existingTaskId + '/units';
 
+/**
+* TODO: Process image to make it an actual pipeline.
+*/
+
 const insertTask = (url) => {
     const unit = {
         content: {
