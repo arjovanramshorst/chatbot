@@ -331,14 +331,14 @@ var executeState = function(chatId, msg) {
             executeState(chatId, msg);
             break;
         case 'quit_task': // to quit while doing a task
-            if (msg.text === 'yes') {
+            if (msg.text === 'yes, i want to quit') {
                 setState(chatId, 'quit_chat');
                 executeState(chatId, msg);
-                //TODO: unfinished task returned.
-            } else {
+                //TODO: unfinished task returned, back in the tasks 'to do' list.
+            } else if (msg.text === 'no, i want to continue with the task') {
                 bot.sendMessage(chatId, 'return to task here');
-                setState(chatId, 'task_awaiting_answer') //--> not right state
-                executeState(chatId, msg); //return to last question asked
+                setState(chatId, 'task_init') //--> not right state maybe?
+                executeState(chatId, msg); //TODO: return to last question asked
             }
             break;
         case 'quit_chat':
@@ -348,7 +348,6 @@ var executeState = function(chatId, msg) {
         default:
             setState(chatId, 'new');
             executeState(chatId, msg);
-
     }
 };
 
@@ -406,8 +405,8 @@ bot.onText(/\/quit/, function (msg) {
             reply_markup: JSON.stringify({
                 one_time_keyboard: true,
                 keyboard: [
-                   ['yes'],
-                   ['no']
+                   ['yes, i want to quit'],
+                   ['no, i want to continue with the task']
                 ]
             })
         });
