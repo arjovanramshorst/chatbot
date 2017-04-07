@@ -58,7 +58,8 @@ var commands = [
     '/start',
     '/reset',
     '/choosetask',
-    '/help'
+    '/help',
+    '/quit' // TODO
 ];
 
 var getState = function(chatId) {
@@ -170,7 +171,7 @@ var executeState = function(chatId, msg) {
         case 'help':
             bot.sendMessage(chatId, "Bucky makes it possible to do microwork, whether you are on the go or when you have more time. "
                 + "A list of possible types of tasks is presented. If you select one of the types of tasks, then you can complete "
-                + "them in return for a monetary compensation. When you are done, you can simply exit the chat.");
+                + "them in return for a monetary compensation. When you are done, you can simply type '/quit' to end the conversation.");
             setState(chatId, 'start');
             executeState(chatId, msg);
             break;
@@ -329,6 +330,21 @@ var executeState = function(chatId, msg) {
             setState(chatId, 'start');
             executeState(chatId, msg);
             break;
+        case 'quit_task': // to quit while doing a task
+            if (msg.text === 'yes') {
+                setState(chatId, 'quit_chat');
+                executeState(chatId, msg);
+                //TODO: unfinished task returned.
+            } else {
+                bot.sendMessage(chatId, 'return to task here');
+                setState(chatId, 'task_awaiting_answer') //--> not right state
+                executeState(chatId, msg); //return to last question asked
+            }
+            break;
+        case 'quit_chat':
+            setState(chatId, 'start');
+            bot.sendMessage(chatId, 'Bye for now!');
+            break;
         default:
             setState(chatId, 'new');
             executeState(chatId, msg);
@@ -378,8 +394,29 @@ bot.onText(/\/reset/, function (msg) {
 // Matches /help
 bot.onText(/\/help/, function (msg) {
     var chatId = msg.chat.id;
-    setState(chatId, 'help'); //TODO: This state does not exist yet.
+    setState(chatId, 'help');
     executeState(chatId, msg);
+});
+
+// Matches /quit
+bot.onText(/\/quit/, function (msg) {
+    var chatId = msg.chat.id;
+    if (getState(chatId) === 'task_init' || getState(chatId) === 'task_ask_question' || getState(chatId) === 'task_awaiting_answer' || getState(chatId) === 'task_complete') {
+        bot.sendMessage(chatId, "Are you sure you want to quit now during your task?", {
+            reply_markup: JSON.stringify({
+                one_time_keyboard: true,
+                keyboard: [
+                   ['yes'],
+                   ['no']
+                ]
+            })
+        });
+        setState(chatId, 'quit_task'); 
+        executeState(chatId, msg);
+    } else {
+        setState(chatId, 'quit_chat');
+        executeState(chatId, msg);
+    }
 });
 
 // API ROUTES
