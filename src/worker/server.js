@@ -52,7 +52,7 @@ conn.once('open', function () {
     console.log('Connected successfully to MongoDB');
 });
 
-const REVIEW_CHANCE = 0
+const REVIEW_CHANCE = 1
 
 /* ======================= */
 
@@ -242,8 +242,10 @@ bot.on('message', function (msg) {
 });
 
 
-var executeState = function(chatId, msg) {
-    var task, question;
+const executeState = (chatId, msg) => {
+    const task = getTask(chatId)
+    const question = task ? task.questions[getQuestionCounter(chatId)] : null;
+    const unit = getUnit(chatId)
 
     switch (getState(chatId)) {
         case 'new':
@@ -283,13 +285,13 @@ var executeState = function(chatId, msg) {
                 setState(chatId, 'task_init');
                 executeState(chatId, msg)
             }).catch(err => {
+                console.log(err)
                 bot.sendMessage(chatId, "Sorry, but I do not know that task.");
                 setState(chatId, 'start');
                 executeState(chatId, msg);
             });
             break;
         case 'task_init': // sending data from unit
-            task = getTask(chatId);
             if(Math.random() < REVIEW_CHANCE) { // Do review task
                 fetchUnitsForTask(task).then(units => {
                     const reviewUnit = getReviewUnit(units)
@@ -350,13 +352,10 @@ var executeState = function(chatId, msg) {
             }
             break;
         case 'task_ask_question': // asking a question
-            task = getTask(chatId);
-            question = task.questions[getQuestionCounter(chatId)];
-
             // ask the question
             switch (question.response_definition.response_type) {
                 case 'SELECT':
-                    var answers = [];
+                    let answers = [];
                     question.response_definition.response_select_options.forEach(function (option) {
                         answers.push([option]);
                     });
@@ -384,8 +383,6 @@ var executeState = function(chatId, msg) {
             //NOTE: no need to make recursive call as the bot will passively await the answer.
             break;
         case 'task_awaiting_answer': // waiting for an answer
-            task = getTask(chatId);
-            question = task.questions[getQuestionCounter(chatId)];
             var valid_answer = false;
             var response_type = question.response_definition.response_type;
             var response_select_options = question.response_definition.response_select_options;
@@ -444,10 +441,7 @@ var executeState = function(chatId, msg) {
         case 'task_review_question':
             // Show question
             // Show answer
-            let task = getTask(chatId)
             let solutionUserId = getReviewUserId(chatId)
-            let unit = getUnit(chatId)
-            let question = task.questions[getQuestionCounter(chatId)]
             const response = getResponseForQuestion(unit, solutionUserId, getQuestionCounter(chatId))
             const reviewString = 'Is the following correct?\n Q: '+ question + '\nA: ' + response
 
@@ -461,7 +455,6 @@ var executeState = function(chatId, msg) {
             break
         case 'task_review_awaiting':
             // Receive answer (yes or no)
-            task = getTask(chatId)
             if(msg.text && (msg.text === 'yes' || msg.text === 'no')) {
                 pushAnswer(chatId, msg.text);
                 if(getQuestionCounter(chatId) < task.questions.length - 1) {
