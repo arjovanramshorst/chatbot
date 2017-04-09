@@ -29,8 +29,8 @@ var port = /*process.env.PORT || */ 3000;
 /* ========== TELEGRAM SETUP ============= */
 // replace the value below with the Telegram token you receive from @BotFather 
 //var token = '295147674:AAERxZjce89nISZpVfBMbyJDK6FIHE8u1Zw'; //Lizzy, username: @buck_a_bot
-var token = '334665274:AAHal-GI-g_Os4OiSOQ04D7h1pUY_98Slgo'; //Bjorn, username: @@BuckABot
-//var token = '373349364:AAGPbNZb8tdCBabVGCQMm_vG_UBjAh7_rkY'; //Arjo, username: @bucky_two_bot
+// var token = '334665274:AAHal-GI-g_Os4OiSOQ04D7h1pUY_98Slgo'; //Bjorn, username: @@BuckABot
+var token = '373349364:AAGPbNZb8tdCBabVGCQMm_vG_UBjAh7_rkY'; //Arjo, username: @bucky_two_bot
 //var token = '361869218:AAEcJhYl42u9FmynLhp1Ti5VKRzlEladmDk'; //Joost, username: @bucky_three_bot
 
 // Create a bot that uses 'polling' to fetch new updates
@@ -48,6 +48,8 @@ conn.once('open', function () {
     console.log('Connected successfully to MongoDB');
 });
 
+const REVIEW_CHANCE = 1.0
+
 /* ======================= */
 
 var stateTracker = {};
@@ -55,6 +57,7 @@ var activeTask = {};
 var activeUnit = {};
 var questionCounter = {};
 var activeTaskAnswers = {};
+var activeReview = {};
 
 var commands = [
     '/start',
@@ -87,6 +90,14 @@ var getUnit = function(chatId) {
 var setUnit = function(chatId, unit) {
     activeUnit[chatId] = unit;
 };
+
+var setReviewUserId = function(chatId, userId) {
+    activeReview[chatId] = userId
+}
+
+var getReviewUserId = function(chatId) {
+    return activeReview[chatId]
+}
 
 var pushAnswer = function(chatId, answer) {
     if(chatId in activeTaskAnswers === false) {
@@ -153,6 +164,17 @@ const fetchUnitsForTask = (task) => {
     })
 }
 
+const saveReview = (answers, chat_id, unit) => {
+    if(answers.length > 0 && !answers.includes('no')) {
+        storeReview(unit, chat_id, 'confirmed')
+    } else if(answers.length > 0 && answers.includes('no')) {
+        storeReview(unit, chat_id, 'rejected')
+    } else {
+        console.log('One or more incorrect answers given')
+        console.log(answers)
+    }
+}
+
 const storeReview = (unit, chat_id, review) => {
     unit.solutions.map(solution => {
         if(solution.user_id === chat_id) {
@@ -170,7 +192,7 @@ const storeReview = (unit, chat_id, review) => {
     });
 }
 
-const getReviewSolution = (units) => {
+const getReviewUnit = (units) => {
     const reviewSolutions = units.filter(unit => {
         // Filter units that require at least one solution to be reviewed.
         return unit.solutions.findIndex(solution => solution.reviewed === 'pending') !== -1;
@@ -190,6 +212,10 @@ const getReviewSolution = (units) => {
     }
 
     return null;
+}
+
+const getResponseForQuestion = (unit, reviewedId, questionNumber) => {
+    return unit.solutions.find(solution => solution.user_id === reviewedId).responses[questionNumber]
 }
 
 // Listen for any kind of message. There are different kinds of messages.
@@ -260,37 +286,64 @@ var executeState = function(chatId, msg) {
             break;
         case 'task_init': // sending data from unit
             task = getTask(chatId);
-
-            Unit.findOne({task_id: task._id}, function (err, unit) {
-                if(unit === null) {
-                    bot.sendMessage(chatId, "Enough other people are already working on this task at the moment. Please select another.");
-                    setState(chatId, 'start');
-                    executeState(chatId, msg);
-                }
-                else {
-                    initQuestionCounter(chatId);
-                    setUnit(chatId, unit);
-
-                    // process all unit content
-                    switch (task.content_definition.content_type) {
-                        case 'IMAGE_LIST':
-                            Object.keys(unit.content).forEach(function (key) {
-                                bot.sendPhoto(chatId, unit.content[key], {});
-                            });
-                            break;
-                        case 'TEXT_LIST':
-                            Object.keys(unit.content).forEach(function (key) {
-                                bot.sendMessage(chatId, unit.content[key], {});
-                            });
-                            break;
-                        default:
-                            bot.sendMessage(chatId, "Please perform the following task");
+            if(Math.random() < REVIEW_CHANCE) { // Do review task
+                fetchUnitsForTask(task).then(units => {
+                    const reviewUnit = getReviewUnit(units)
+                    if(reviewUnit !== null) {
+                        switch (task.content_definition.content_type) {
+                            case 'IMAGE_LIST':
+                                Object.keys(reviewUnit.unit.content).forEach(function (key) {
+                                    bot.sendPhoto(chatId, reviewUnit.unit.content[key], {});
+                                });
+                                break;
+                            case 'TEXT_LIST':
+                                Object.keys(reviewUnit.unit.content).forEach(function (key) {
+                                    bot.sendMessage(chatId, reviewUnit.unit.content[key], {});
+                                });
+                                break;
+                        }
+                        initQuestionCounter(chatId);
+                        setUnit(chatId, reviewUnit.unit)
+                        setReviewUserId(chatId, reviewUnit.user_id)
+                        setState(chatId, 'task_review_question')
                     }
+                    else {
+                        // Do something else when no review task is available?
+                    }
+                })
 
-                    setState(chatId, 'task_ask_question');
-                    executeState(chatId, msg);
-                }
-            });
+            } else {
+                Unit.findOne({task_id: task._id}, function (err, unit) {
+                    if(unit === null) {
+                        bot.sendMessage(chatId, "Enough other people are already working on this task at the moment. Please select another.");
+                        setState(chatId, 'start');
+                        executeState(chatId, msg);
+                    }
+                    else {
+                        initQuestionCounter(chatId);
+                        setUnit(chatId, unit);
+
+                        // process all unit content
+                        switch (task.content_definition.content_type) {
+                            case 'IMAGE_LIST':
+                                Object.keys(unit.content).forEach(function (key) {
+                                    bot.sendPhoto(chatId, unit.content[key], {});
+                                });
+                                break;
+                            case 'TEXT_LIST':
+                                Object.keys(unit.content).forEach(function (key) {
+                                    bot.sendMessage(chatId, unit.content[key], {});
+                                });
+                                break;
+                            default:
+                                bot.sendMessage(chatId, "Please perform the following task");
+                        }
+
+                        setState(chatId, 'task_ask_question');
+                        executeState(chatId, msg);
+                    }
+                });
+            }
             break;
         case 'task_ask_question': // asking a question
             task = getTask(chatId);
@@ -384,15 +437,44 @@ var executeState = function(chatId, msg) {
 
             executeState(chatId, msg);
             break;
-        case 'review_question':
+        case 'task_review_question':
+            // Show question
+            // Show answer
+            let task = getTask(chatId)
+            let solutionUserId = getReviewUserId(chatId)
+            let unit = getUnit(chatId)
+            let question = task.questions[getQuestionCounter(chatId)]
+            const response = getResponseForQuestion(unit, solutionUserId, getQuestionCounter(chatId))
+            const reviewString = 'Is the following correct?\n Q: '+ question + '\nA: ' + response
 
+            bot.sendMessage(chatId, reviewString, {
+                reply_markup: JSON.stringify({
+                    one_time_keyboard: true,
+                    keyboard: [['yes'],['no']],
+                    resize_keyboard: true
+                })
+            })
+            break
+        case 'task_review_awaiting':
+            // Receive answer (yes or no)
+            task = getTask(chatId)
+            if(msg.text && (msg.text === 'yes' || msg.text === 'no')) {
+                pushAnswer(chatId, msg.text);
+                if(getQuestionCounter(chatId) < task.questions.length - 1) {
+                    incrementQuestionCounter(chatId);
+                    setState(chatId, 'task_review_question');
+                } else {
+                    setState(chatId, 'task_review_complete');
+                }
+            } else {
+                bot.sendMessage(chatId, 'Invalid answer, requires "yes" or "no"')
+                setState(chatId, 'task_review_question')
+            }
+            executeState(chatId, msg)
             break;
-        case 'review_awaiting':
-
-            break;
-        case 'review_complete':
+        case 'task_review_complete':
             saveReview(getAnswers(chatId), chatId, getUnit(chatId));
-            bot.sendMesssage(chatId, "The review is complete!");
+            bot.sendMessage(chatId, "The review is complete!");
 
             setState(chatId, 'start');
             executeState(chatId, msg);
