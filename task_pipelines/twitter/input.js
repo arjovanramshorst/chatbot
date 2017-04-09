@@ -3,7 +3,7 @@ var Twitter = require('twitter-node-client').Twitter;
 /**
  * Harcoded task id. Should be known to the user (requester) and can therefore be hardcoded.
  */
-const existingTaskId = '58e9feb95020aa002d0ab018';
+const existingTaskId = '58ea2224833029001fb5d00b';
 const taskUrl = 'http://localhost:3333/api/tasks/' + existingTaskId;
 const taskUnitsUrl = taskUrl + '/units';
 
@@ -29,23 +29,65 @@ const twitter = new Twitter(config);
 
 // Process unit to check if we should add it to new units.
 const validateTweetText = (text) => {
-    required_words = ['obama', 'obamacare', 'president'];
-    for (var i = 0; i < required_words.length; i++) {
-        if (text.toLowerCase().indexOf(required_words[i]) !== -1) {
-            return true
+    filterWords = [
+        'fuck',
+        'sex',
+        'sexy',
+        'nude',
+        'busty',
+        'swingers',
+        'naked',
+        'shit',
+        'amateur',
+        'titty',
+        'relationships',
+        'deepthroat',
+        'bigboob',
+        'skypefun',
+        'camshow',
+        'bigtit',
+        'kikmessenger',
+        'bj',
+        'hotsluts',
+        'beach',
+        'sluts',
+        'wank',
+        'creampie',
+        'swinger',
+        'facials',
+        'rimming',
+        'orgy',
+        'fav',
+        'interracial',
+        'companion',
+        'nylon',
+        'strapon',
+        'porno',
+        'milfs',
+        'august',
+        'cumprincess',
+        'tugjob',
+        'couple',
+        'nipples',
+        'ebony',
+        'latex'
+    ];
+    for (var i = 0; i < filterWords.length; i++) {
+        if (text.toLowerCase().indexOf(filterWords[i]) !== -1) {
+            return false
         }
     }
-    return false
+    return true
 };
 
 const insertTweets = () => {
-    const data = twitter.getUserTimeline({
-        screen_name: 'realDonaldTrump',
-        count: 1000
+    const data = twitter.getSearch({
+        'q': '#delft',
+        'count': 100
     }, function() {
         res.status(404).send({"error": "No tweets found"});
     }, function(data) {
-        const json_result = JSON.parse(data);
+        const json_result = JSON.parse(data).statuses;
 
         request(taskUnitsUrl, function(error, response, body) {
             if (!error) {
@@ -61,6 +103,7 @@ const insertTweets = () => {
 
                 // Add tweets which are not yet in the database
                 for (var i = 0; i < json_result.length; i++) {
+
                     const id = json_result[i].id_str;
                     const screenName = json_result[i].user.screen_name;
                     const text = json_result[i].text;
