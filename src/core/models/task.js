@@ -9,6 +9,7 @@ var Schema = mongoose.Schema;
 var TaskSchema = new Schema({
     name: String,
     requester_id: String,
+    description: String,
     solution_limit: Number, // A requester pays for a limited amount of responses
     content_definition: {
         content_type: String, // IMAGE / TWEET

@@ -2,6 +2,7 @@ var request = require('request');
 var Dropbox = require('dropbox')
 
 var dbx = new Dropbox({accessToken: 'PUTNQdITp2UAAAAAAAASr04_JGUMS4kULPe9DU3LvNrrd1nyTu5c1ixv48eafae6'});
+<<<<<<< HEAD
 
 const requesterId = 'hardcodedRequesterIdTwo'
 const requesterTasksUrl = 'http://localhost:3333/api/requester/' + requesterId + '/tasks';
@@ -10,6 +11,18 @@ request(requesterTasksUrl, function(error, response, body) {
     const jsonBody = JSON.parse(body)
     if (error || jsonBody.length !== 1) {
         console.log('Something went wrong. No or multiple tasks found for this user?');
+=======
+/**
+ * Harcoded task id. Should be known to the user (requester) and can therefore be hardcoded.
+ */
+const existingTaskId = '58ea3cbf16681b001fabc691';
+const taskUrl = 'http://localhost:3333/api/tasks/' + existingTaskId;
+const taskUnitsUrl = taskUrl + '/units';
+
+request(taskUrl, function(error, response, body) {
+    if (error || JSON.parse(body).error) {
+        console.log('Something went wrong. Probably the id of the task is wrong.')
+>>>>>>> docs
     } else {
         const taskId = jsonBody[0]._id;
         const taskUnitsUrl = 'http://localhost:3333/api/tasks/' + taskId + '/units';

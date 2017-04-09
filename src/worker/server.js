@@ -29,9 +29,9 @@ var port = /*process.env.PORT || */ 3000;
 /* ========== TELEGRAM SETUP ============= */
 // replace the value below with the Telegram token you receive from @BotFather
 //var token = '295147674:AAERxZjce89nISZpVfBMbyJDK6FIHE8u1Zw'; //Lizzy, username: @buck_a_bot
-//var token = '334665274:AAHal-GI-g_Os4OiSOQ04D7h1pUY_98Slgo'; //Bjorn, username: @BuckABot
+var token = '334665274:AAHal-GI-g_Os4OiSOQ04D7h1pUY_98Slgo'; //Bjorn, username: @BuckABot
 //var token = '373349364:AAGPbNZb8tdCBabVGCQMm_vG_UBjAh7_rkY'; //Arjo, username: @bucky_two_bot
-var token = '361869218:AAEcJhYl42u9FmynLhp1Ti5VKRzlEladmDk'; //Joost, username: @bucky_three_bot
+//var token = '361869218:AAEcJhYl42u9FmynLhp1Ti5VKRzlEladmDk'; //Joost, username: @bucky_three_bot
 
 // Create a bot that uses 'polling' to fetch new updates
 var bot = new Tgfancy(token, {polling: true, orderedSending: true});
@@ -103,12 +103,22 @@ var getAnswers = function(chatId) {
     }
 };
 
+var clearAnswers = function(chatId) {
+    if(chatId in activeTaskAnswers) {
+        activeTaskAnswers[chatId] = [];
+    }
+};
+
 var initQuestionCounter = function(chatId) {
     questionCounter[chatId] = 0;
 };
 
 var incrementQuestionCounter = function(chatId) {
     questionCounter[chatId] += 1;
+};
+
+var clearQuestionCounter = function(chatId) {
+    delete questionCounter[chatId];
 };
 
 var getQuestionCounter = function(chatId) {
@@ -199,13 +209,21 @@ var executeState = function(chatId, msg) {
         case 'task_choice_pending': // waiting for user to select task
             fetchTaskByName(msg.text).then(result => {
                 setTask(chatId, result);
-                setState(chatId, 'task_init');
-                executeState(chatId, msg)
+                setState(chatId, 'task_info');
+                executeState(chatId, msg);
             }).catch(err => {
                 bot.sendMessage(chatId, "Sorry, but I do not know that task.");
                 setState(chatId, 'start');
                 executeState(chatId, msg);
             });
+            break;
+        case 'task_info': // give the user some info about the task before starting
+            task = getTask(chatId);
+            if (task && 'description' in task)
+                bot.sendMessage(chatId, task.description);
+
+            setState(chatId, 'task_init');
+            executeState(chatId, msg);
             break;
         case 'task_init': // sending data from unit
             task = getTask(chatId);
@@ -338,7 +356,12 @@ var executeState = function(chatId, msg) {
             saveAnswers(getAnswers(chatId), chatId, getUnit(chatId));
             bot.sendMessage(chatId, "Good job! You finished the task. Lets do another one!");
 
-            setState(chatId, 'start');
+            //clear saved data
+            clearAnswers(chatId);
+            clearQuestionCounter(chatId);
+
+            //serve a new unit of same task
+            setState(chatId, 'task_init');
             executeState(chatId, msg);
             break;
         case 'quit_task': // to quit while doing a task
@@ -348,10 +371,27 @@ var executeState = function(chatId, msg) {
             } else if (msg.text === 'no, i want to continue with the task') {
                 setState(chatId, 'task_ask_question');
                 executeState(chatId, msg);
+            } else {
+                bot.sendMessage(chatId, "Sorry, but I do not understand what you mean, please answer using the buttons below.", {
+                    reply_markup: JSON.stringify({
+                        one_time_keyboard: true,
+                        keyboard: [
+                           ['yes, i want to quit'],
+                           ['no, i want to continue with the task']
+                        ],
+                        resize_keyboard: true
+                    })
+                });
+                setState(chatId, 'quit_task');
             }
             break;
         case 'quit_chat':
             setState(chatId, 'start');
+
+            //clear saved data
+            clearAnswers(chatId);
+            clearQuestionCounter(chatId);
+
             bot.sendMessage(chatId, 'Bye for now!');
             break;
         default:

@@ -4,8 +4,14 @@ var fs = require('fs');
 /**
  * Harcoded task id. Should be known to the user (requester) and can therefore be hardcoded.
  */
+<<<<<<< HEAD
  const requesterId = 'hardcodedRequesterIdOne'
  const requesterTasksUrl = 'http://localhost:3333/api/requester/' + requesterId + '/tasks';
+=======
+const existingTaskId = '58ea3cbf16681b001fabc68f';
+const taskUrl = 'http://localhost:3333/api/tasks/' + existingTaskId;
+const taskUnitsUrl = taskUrl + '/units';
+>>>>>>> docs
 
  request(requesterTasksUrl, function(error, response, body) {
    const jsonBody = JSON.parse(body)
