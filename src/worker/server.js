@@ -209,18 +209,26 @@ var executeState = function(chatId, msg) {
         case 'task_choice_pending': // waiting for user to select task
             fetchTaskByName(msg.text).then(result => {
                 setTask(chatId, result);
-                setState(chatId, 'task_init');
-                executeState(chatId, msg)
+                setState(chatId, 'task_info');
+                executeState(chatId, msg);
             }).catch(err => {
                 bot.sendMessage(chatId, "Sorry, but I do not know that task.");
                 setState(chatId, 'start');
                 executeState(chatId, msg);
             });
             break;
+        case 'task_info': // give the user some info about the task before starting
+            task = getTask(chatId);
+            if (task && 'description' in task)
+                bot.sendMessage(chatId, task.description);
+
+            setState(chatId, 'task_init');
+            executeState(chatId, msg);
+            break;
         case 'task_init': // sending data from unit
             task = getTask(chatId);
 
-            Unit.findOne({task_id: task._id}, function (err, unit) {
+            Unit.findOne({task_id: task._id, 'solutions': {$not: {$elemMatch: {user_id: chatId}}}}, function (err, unit) {
                 if(unit === null) {
                     bot.sendMessage(chatId, "Enough other people are already working on this task at the moment. Please select another.");
                     setState(chatId, 'start');
@@ -348,10 +356,12 @@ var executeState = function(chatId, msg) {
             saveAnswers(getAnswers(chatId), chatId, getUnit(chatId));
             bot.sendMessage(chatId, "Good job! You finished the task. Lets do another one!");
 
+            //clear saved data
             clearAnswers(chatId);
             clearQuestionCounter(chatId);
 
-            setState(chatId, 'start');
+            //serve a new unit of same task
+            setState(chatId, 'task_init');
             executeState(chatId, msg);
             break;
         case 'quit_task': // to quit while doing a task
