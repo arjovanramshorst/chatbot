@@ -45,7 +45,9 @@ const insertNewUnits = () => {
         response.entries.forEach(file => {
 
             dbx.sharingCreateSharedLinkWithSettings({path: file.path_lower}).then(function(response) {
-                insertUnit(response.url);
+                const url = response.url
+                url.replace('dl=0', 'dl=1'); // Not so clean.
+                insertUnit(url);
             }).catch(function(error) {
                 if (error.status === 409) {
                     console.log('Dropbox file link exists. Probably already seeded then...')
