@@ -37,8 +37,8 @@ router.route('/:task_id')
     // get the task by id
     .get(function(req, res) {
         Task.findById(req.params.task_id, function(err, task) {
-            if (err) {
-                res.send(err);
+            if (err || task == null) {
+                res.send({ error : 'Cannnot find task id. '});
             } else {
                 Unit.find({
                     task_id: task._id

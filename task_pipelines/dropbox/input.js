@@ -5,6 +5,7 @@ var dbx = new Dropbox({accessToken: 'PUTNQdITp2UAAAAAAAASr04_JGUMS4kULPe9DU3LvNr
 /**
  * Harcoded task id. Should be known to the user (requester) and can therefore be hardcoded.
  */
+console.log('Make sure that you have inserted the right task ID! Otherwise the pipeline might crash.')
 const existingTaskId = '58e53d116ba451013a5081c2';
 const taskUnitsUrl = 'http://localhost:3333/api/tasks/' + existingTaskId + '/units';
 
