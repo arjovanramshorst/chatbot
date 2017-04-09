@@ -209,27 +209,34 @@ var executeState = function(chatId, msg) {
             task = getTask(chatId);
 
             Unit.findOne({task_id: task._id}, function (err, unit) {
-                initQuestionCounter(chatId);
-                setUnit(chatId, unit);
-
-                // process all unit content
-                switch (task.content_definition.content_type) {
-                    case 'IMAGE_LIST':
-                        Object.keys(unit.content).forEach(function (key) {
-                            bot.sendPhoto(chatId, unit.content[key], {});
-                        });
-                        break;
-                    case 'TEXT_LIST':
-                        Object.keys(unit.content).forEach(function (key) {
-                            bot.sendMessage(chatId, unit.content[key], {});
-                        });
-                        break;
-                    default:
-                        bot.sendMessage(chatId, "Please perform the following task");
+                if(unit === null) {
+                    bot.sendMessage(chatId, "Enough other people are already working on this task at the moment. Please select another.");
+                    setState(chatId, 'start');
+                    executeState(chatId, msg);
                 }
+                else {
+                    initQuestionCounter(chatId);
+                    setUnit(chatId, unit);
 
-                setState(chatId, 'task_ask_question');
-                executeState(chatId, msg);
+                    // process all unit content
+                    switch (task.content_definition.content_type) {
+                        case 'IMAGE_LIST':
+                            Object.keys(unit.content).forEach(function (key) {
+                                bot.sendPhoto(chatId, unit.content[key], {});
+                            });
+                            break;
+                        case 'TEXT_LIST':
+                            Object.keys(unit.content).forEach(function (key) {
+                                bot.sendMessage(chatId, unit.content[key], {});
+                            });
+                            break;
+                        default:
+                            bot.sendMessage(chatId, "Please perform the following task");
+                    }
+
+                    setState(chatId, 'task_ask_question');
+                    executeState(chatId, msg);
+                }
             });
             break;
         case 'task_ask_question': // asking a question
