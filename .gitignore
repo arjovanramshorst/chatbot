@@ -18,5 +18,8 @@
 /src/core/npm-debug.log
 /src/core/npm-debug.log
 
+/task_pipelines/dropbox/node_modules
+/task_pipelines/twitter/node_modules
+
 /requester/node_modules
 /worker/node_modules
