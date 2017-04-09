@@ -449,6 +449,8 @@ bot.onText(/\/help/, function (msg) {
 // Matches /quit
 bot.onText(/\/quit/, function (msg) {
     var chatId = msg.chat.id;
+
+    //if busy with a task, first ask for confirmation
     if (getState(chatId) === 'task_init' || getState(chatId) === 'task_ask_question' || getState(chatId) === 'task_awaiting_answer' || getState(chatId) === 'task_complete') {
         bot.sendMessage(chatId, "Are you sure you want to quit now during your task?", {
             reply_markup: JSON.stringify({
@@ -460,8 +462,7 @@ bot.onText(/\/quit/, function (msg) {
                 resize_keyboard: true
             })
         });
-        setState(chatId, 'quit_task'); 
-        executeState(chatId, msg);
+        setState(chatId, 'quit_task');
     } else {
         setState(chatId, 'quit_chat');
         executeState(chatId, msg);

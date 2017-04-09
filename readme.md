@@ -19,9 +19,10 @@ Navigate your browser to `localhost:3333/seed/reset-and-seed` to build and fill 
 Bucky can be found on Telegram. Just search for `@buck_a_bot` in the Telegram search bar.
 
 ## Instructions for requesters
-TODO
+TODO ARJO
 
 ## Using the pipelines
+TODO JOOST
 
 ### Twitter
 
