@@ -20,3 +20,9 @@ Bucky can be found on Telegram. Just search for `@buck_a_bot` in the Telegram se
 
 ## Instructions for requesters
 TODO
+
+## Using the pipelines
+
+### Twitter
+
+### Dropbox
