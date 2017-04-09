@@ -30,8 +30,8 @@ var port = /*process.env.PORT || */ 3000;
 // replace the value below with the Telegram token you receive from @BotFather
 //var token = '295147674:AAERxZjce89nISZpVfBMbyJDK6FIHE8u1Zw'; //Lizzy, username: @buck_a_bot
 // var token = '334665274:AAHal-GI-g_Os4OiSOQ04D7h1pUY_98Slgo'; //Bjorn, username: @BuckABot
-//var token = '373349364:AAGPbNZb8tdCBabVGCQMm_vG_UBjAh7_rkY'; //Arjo, username: @bucky_two_bot
-var token = '361869218:AAEcJhYl42u9FmynLhp1Ti5VKRzlEladmDk'; //Joost, username: @bucky_three_bot
+var token = '373349364:AAGPbNZb8tdCBabVGCQMm_vG_UBjAh7_rkY'; //Arjo, username: @bucky_two_bot
+//var token = '361869218:AAEcJhYl42u9FmynLhp1Ti5VKRzlEladmDk'; //Joost, username: @bucky_three_bot
 
 // Create a bot that uses 'polling' to fetch new updates
 var bot = new Tgfancy(token, {polling: true, orderedSending: true});
@@ -123,6 +123,11 @@ var clearQuestionCounter = function(chatId) {
 
 var getQuestionCounter = function(chatId) {
     return questionCounter[chatId];
+};
+
+var clearTemporaryData = function(chatId) {
+    clearAnswers(chatId);
+    clearQuestionCounter(chatId);
 };
 
 const fetchTasks = (query = {}) => {
@@ -226,6 +231,9 @@ var executeState = function(chatId, msg) {
             executeState(chatId, msg);
             break;
         case 'task_init': // sending data from unit
+            //clear saved data
+            clearTemporaryData(chatId);
+
             task = getTask(chatId);
 
             Unit.findOne({task_id: task._id, 'solutions': {$not: {$elemMatch: {user_id: chatId}}}}, function (err, unit) {
@@ -356,17 +364,13 @@ var executeState = function(chatId, msg) {
             saveAnswers(getAnswers(chatId), chatId, getUnit(chatId));
             bot.sendMessage(chatId, "Good job! You finished the task. Lets do another one!");
 
-            //clear saved data
-            clearAnswers(chatId);
-            clearQuestionCounter(chatId);
-
             //serve a new unit of same task
             setState(chatId, 'task_init');
             executeState(chatId, msg);
             break;
         case 'quit_task': // to quit while doing a task
             if (msg.text === 'yes, i want to quit') {
-                setState(chatId, 'quit_chat');
+                setState(chatId, 'start');
                 executeState(chatId, msg);
             } else if (msg.text === 'no, i want to continue with the task') {
                 setState(chatId, 'task_ask_question');
@@ -387,10 +391,6 @@ var executeState = function(chatId, msg) {
             break;
         case 'quit_chat':
             setState(chatId, 'start');
-
-            //clear saved data
-            clearAnswers(chatId);
-            clearQuestionCounter(chatId);
 
             bot.sendMessage(chatId, 'Bye for now!');
             break;
@@ -463,7 +463,6 @@ bot.onText(/\/quit/, function (msg) {
             })
         });
         setState(chatId, 'quit_task');
-        executeState(chatId, msg);
     } else {
         setState(chatId, 'quit_chat');
         executeState(chatId, msg);
