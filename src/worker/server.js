@@ -125,6 +125,11 @@ var getQuestionCounter = function(chatId) {
     return questionCounter[chatId];
 };
 
+var clearTemporaryData = function(chatId) {
+    clearAnswers(chatId);
+    clearQuestionCounter(chatId);
+};
+
 const fetchTasks = (query = {}) => {
     return new Promise((resolve, reject) => {
         Task.find(query, function (err, tasks) {
@@ -226,6 +231,9 @@ var executeState = function(chatId, msg) {
             executeState(chatId, msg);
             break;
         case 'task_init': // sending data from unit
+            //clear saved data
+            clearTemporaryData(chatId);
+
             task = getTask(chatId);
 
             Unit.findOne({task_id: task._id, 'solutions': {$not: {$elemMatch: {user_id: chatId}}}}, function (err, unit) {
@@ -356,10 +364,6 @@ var executeState = function(chatId, msg) {
             saveAnswers(getAnswers(chatId), chatId, getUnit(chatId));
             bot.sendMessage(chatId, "Good job! You finished the task. Lets do another one!");
 
-            //clear saved data
-            clearAnswers(chatId);
-            clearQuestionCounter(chatId);
-
             //serve a new unit of same task
             setState(chatId, 'task_init');
             executeState(chatId, msg);
@@ -387,10 +391,6 @@ var executeState = function(chatId, msg) {
             break;
         case 'quit_chat':
             setState(chatId, 'start');
-
-            //clear saved data
-            clearAnswers(chatId);
-            clearQuestionCounter(chatId);
 
             bot.sendMessage(chatId, 'Bye for now!');
             break;
