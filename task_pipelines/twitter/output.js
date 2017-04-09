@@ -4,20 +4,24 @@ var fs = require('fs');
 /**
  * Harcoded task id. Should be known to the user (requester) and can therefore be hardcoded.
  */
-const existingTaskId = '58ea38b597c2340020894e3e';
-const taskUrl = 'http://localhost:3333/api/tasks/' + existingTaskId;
-const taskUnitsUrl = taskUrl + '/units';
+ const requesterId = 'hardcodedRequesterIdOne'
+ const requesterTasksUrl = 'http://localhost:3333/api/requester/' + requesterId + '/tasks';
 
-request(taskUrl, function(error, response, body) {
-    if (error || JSON.parse(body).error) {
-        console.log('Something went wrong. Probably the id of the task is wrong.')
-    } else {
-        console.log('Found task! Lets add some tweets.');
-        outputCSV()
-    }
-});
+ request(requesterTasksUrl, function(error, response, body) {
+   const jsonBody = JSON.parse(body)
+   if(error || jsonBody.length !== 1) {
+     console.log('Something went wrong. No or multiple tasks found for this user?');
+   }
+   else {
+     const taskId = jsonBody[0]._id;
+     const taskUrl = 'http://localhost:3333/api/tasks/' + taskId;
+     const taskUnitsUrl = taskUrl + '/units';
+     outputCSV(taskUnitsUrl);
+   }
+ });
 
-const outputCSV = () => {
+
+const outputCSV = (taskUnitsUrl) => {
     request(taskUnitsUrl, function(error, response, body) {
         if (!error) {
             const fields = ['tweet_id', 'tweet_text', 'yes', 'no', 'dont_know'];
@@ -26,9 +30,9 @@ const outputCSV = () => {
 
             for (var i = 0; i < units.length; i++) {
                 const solutions = units[i].solutions;
-                const positives = 0;
-                const neutrals = 0;
-                const negatives = 0;
+                var positives = 0;
+                var neutrals = 0;
+                var negatives = 0;
 
                 for (var j = 0; j < solutions.length; j++) {
                     if (solutions[j].responses[0].toLowerCase() == 'yes') {
