@@ -93,7 +93,7 @@ var addSentimentTask = (res) => {
     var task = new Task();
     task.name = 'Some Sentiment task for D. Trump tweets';
     task.requester_id = 'whateveridfromsomerequesterinstring';
-    task.content_definition.content_type = 'TEXT';
+    task.content_definition.content_type = 'TEXT_LIST';
     task.content_definition.content_fields = {
         'text': 'content.tweet_text',
     };
@@ -179,7 +179,7 @@ var addContentCreationTask = (res) => {
     var task = new Task();
     task.name = 'Content creation task';
     task.requester_id = 'whateveridfromsomerequesterinstring';
-    task.content_definition.content_type = 'TEXT';
+    task.content_definition.content_type = 'TEXT_LIST';
     task.content_definition.content_fields = {
         'text': 'content.content_description',
     };
