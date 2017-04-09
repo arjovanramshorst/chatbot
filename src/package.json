@@ -6,7 +6,7 @@
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
     "dev-requester": "nodemon requester/server.js",
-    "dev-worker": "nodemon worker_old/index.js"
+    "dev-worker": "nodemon worker/server.js"
   },
   "author": "",
   "license": "ISC",
