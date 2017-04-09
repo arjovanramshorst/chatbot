@@ -14,7 +14,6 @@ var Tgfancy = require("tgfancy");
 
 var Task = require('../core/models/task');
 var Unit = require('../core/models/unit');
-var Solution = require('../core/models/solution');
 
 // configure app
 app.use(morgan('dev')); // log requests to the console
@@ -29,8 +28,8 @@ var port = /*process.env.PORT || */ 3000;
 /* ========== TELEGRAM SETUP ============= */
 // replace the value below with the Telegram token you receive from @BotFather
 //var token = '295147674:AAERxZjce89nISZpVfBMbyJDK6FIHE8u1Zw'; //Lizzy, username: @buck_a_bot
-// var token = '334665274:AAHal-GI-g_Os4OiSOQ04D7h1pUY_98Slgo'; //Bjorn, username: @BuckABot
-var token = '373349364:AAGPbNZb8tdCBabVGCQMm_vG_UBjAh7_rkY'; //Arjo, username: @bucky_two_bot
+var token = '334665274:AAHal-GI-g_Os4OiSOQ04D7h1pUY_98Slgo'; //Bjorn, username: @BuckABot
+//var token = '373349364:AAGPbNZb8tdCBabVGCQMm_vG_UBjAh7_rkY'; //Arjo, username: @bucky_two_bot
 //var token = '361869218:AAEcJhYl42u9FmynLhp1Ti5VKRzlEladmDk'; //Joost, username: @bucky_three_bot
 
 // Create a bot that uses 'polling' to fetch new updates
@@ -154,6 +153,27 @@ const fetchTask = (query = {}) => {
     })
 }
 
+const saveAnswers = (answers, chatId, unit) => {
+    return new Promise((resolve, reject) => {
+        unit.solutions.push({
+            responses: answers,
+            reviewed: 'PENDING',
+            user_id: chatId,
+        });
+
+        unit.save(function(err) {
+            if (err) {
+                console.error(err);
+                reject(err);
+            }
+            else {
+                console.log("Saved answers successfully!");
+                resolve(unit);
+            }
+        });
+    })
+}
+
 const fetchTaskByName = (name) => fetchTask({name: name});
 
 // Listen for any kind of message. There are different kinds of messages.
@@ -224,46 +244,70 @@ var executeState = function(chatId, msg) {
             break;
         case 'task_info': // give the user some info about the task before starting
             task = getTask(chatId);
-            if (task && 'description' in task)
+
+            //if a description exists, send it
+            if (task && task.description) {
                 bot.sendMessage(chatId, task.description);
+            }
 
             setState(chatId, 'task_init');
             executeState(chatId, msg);
             break;
         case 'task_init': // sending data from unit
-            //clear saved data
-            clearTemporaryData(chatId);
-
             task = getTask(chatId);
 
             Unit.findOne({task_id: task._id, 'solutions': {$not: {$elemMatch: {user_id: chatId}}}}, function (err, unit) {
-                if(unit === null) {
-                    bot.sendMessage(chatId, "Enough other people are already working on this task at the moment. Please select another.");
-                    setState(chatId, 'start');
-                    executeState(chatId, msg);
-                }
-                else {
-                    initQuestionCounter(chatId);
-                    setUnit(chatId, unit);
-
-                    // process all unit content
-                    switch (task.content_definition.content_type) {
-                        case 'IMAGE_LIST':
-                            Object.keys(unit.content).forEach(function (key) {
-                                bot.sendPhoto(chatId, unit.content[key], {});
-                            });
-                            break;
-                        case 'TEXT_LIST':
-                            Object.keys(unit.content).forEach(function (key) {
-                                bot.sendMessage(chatId, unit.content[key], {});
-                            });
-                            break;
-                        default:
-                            bot.sendMessage(chatId, "Please perform the following task");
+                if (err) {
+                    console.log(err);
+                    setState(chatId, 'new');
+                } else {
+                    if (unit === null) {
+                        bot.sendMessage(chatId, "Enough other people are already working on this task at the moment. Please select another.");
+                        setState(chatId, 'start');
+                        executeState(chatId, msg);
                     }
+                    else {
+                        //clear previously saved data
+                        clearTemporaryData(chatId);
 
-                    setState(chatId, 'task_ask_question');
-                    executeState(chatId, msg);
+                        initQuestionCounter(chatId);
+                        setUnit(chatId, unit);
+
+                        //find all unit fields that are declared in the task
+                        var taskFields = task.content_definition.content_fields;
+                        var fields = [];
+                        Object.keys(taskFields).forEach(function (key) {
+                            if (taskFields.hasOwnProperty(key)) {
+                                var value = taskFields[key];
+                                fields.push(value.substr(value.lastIndexOf(".") + 1));
+                            }
+                        });
+
+                        // process all unit content
+                        switch (task.content_definition.content_type) {
+                            case 'IMAGE_LIST':
+                                //send all declared unit contents
+                                Object.keys(unit.content).forEach(function (key) {
+                                    if(fields.indexOf(key) !== -1) {
+                                        bot.sendPhoto(chatId, unit.content[key], {});
+                                    }
+                                });
+                                break;
+                            case 'TEXT_LIST':
+                                //send all declared unit contents
+                                Object.keys(unit.content).forEach(function (key) {
+                                    if(fields.indexOf(key) !== -1) {
+                                        bot.sendMessage(chatId, unit.content[key], {});
+                                    }
+                                });
+                                break;
+                            default:
+                                bot.sendMessage(chatId, "Please perform the following task");
+                        }
+
+                        setState(chatId, 'task_ask_question');
+                        executeState(chatId, msg);
+                    }
                 }
             });
             break;
@@ -333,7 +377,6 @@ var executeState = function(chatId, msg) {
                 pushAnswer(chatId, msg.photo);
                 valid_answer = true;
             } else {
-                console.log(question.response_definition);
                 valid_answer = false;
             }
 
@@ -361,12 +404,16 @@ var executeState = function(chatId, msg) {
             break;
         case 'task_complete': // clean up when task is complete
             //save the solution to the task
-            saveAnswers(getAnswers(chatId), chatId, getUnit(chatId));
-            bot.sendMessage(chatId, "Good job! You finished the task. Lets do another one!");
+            saveAnswers(getAnswers(chatId), chatId, getUnit(chatId)).then((unit) => {
+                bot.sendMessage(chatId, "Good job! You finished the task. Lets do another one!");
 
-            //serve a new unit of same task
-            setState(chatId, 'task_init');
-            executeState(chatId, msg);
+                //clear saved data
+                clearTemporaryData(chatId);
+
+                //serve a new unit of same task
+                setState(chatId, 'task_info');
+                executeState(chatId, msg);
+            });
             break;
         case 'quit_task': // to quit while doing a task
             if (msg.text === 'yes, i want to quit') {
@@ -398,23 +445,6 @@ var executeState = function(chatId, msg) {
             setState(chatId, 'new');
             executeState(chatId, msg);
     }
-};
-
-// Writes the answers for unit unitId by worker chatId to the database
-const saveAnswers = (answers, chatId, unit) => {
-    unit.solutions.push({
-        responses: answers,
-        reviewed: 'PENDING',
-        user_id: chatId,
-    });
-
-    unit.save(function(err) {
-        if (err)
-            console.error(err);
-        else {
-            console.log("Saved answers successfully!");
-        }
-    });
 };
 
 // Matches /start
