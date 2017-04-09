@@ -1,0 +1,10 @@
+{
+  "name": "crowdsource-twitter-external",
+  "version": "1.0.0",
+  "dependencies": {
+    "fs": "0.0.1-security",
+    "json2csv": "^3.7.3",
+    "request": "^2.81.0",
+    "twitter-node-client": "0.0.6"
+  }
+}

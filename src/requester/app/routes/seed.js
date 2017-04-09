@@ -5,20 +5,23 @@ var Unit = require('../../../core/models/unit');
 var router = express.Router();
 
 // Reset the entire tasks collection and seed some new data
-router.get('/reset-and-seed', function(req, res) {
+router.get('/reset-and-seed', function (req, res) {
     removeAllTasks();
-    addSingleTask(res)
+    addImageListTask(res)
+    addSentimentTask(res)
+    addLocalFilesTask(res)
+    addContentCreationTask(res)
 });
 
 var removeAllTasks = () => {
     // First remove all the current ones.
-    Task.remove({}, function(err) {
+    Task.remove({}, function (err) {
         if (err)
             res.send(err);
     });
 }
 
-var addSingleTask = (res) => {
+var addImageListTask = (res) => {
     var task = new Task();
     task.name = 'Some Test task';
     task.requester_id = 'whateveridfromsomerequesterinstring';
@@ -28,14 +31,14 @@ var addSingleTask = (res) => {
         'image_2': 'content.image_url_second'
     }
     task.questions = [{
-            question: 'Does the image show a readable receipt from a restaurant?',
-            response_definition: {
-                'response_type': 'SELECT',
-                'response_select_options': [
-                    'yes', 'no'
-                ]
-            },
+        question: 'Does the image show a readable receipt from a restaurant?',
+        response_definition: {
+            'response_type': 'SELECT',
+            'response_select_options': [
+                'yes', 'no'
+            ]
         },
+    },
         {
             question: 'What is the name of the restaurant on the receipt?',
             response_definition: {
@@ -70,13 +73,13 @@ var addSingleTask = (res) => {
             'image_url_first': image_urls[i],
             'image_url_second': image_urls[(i + 1) % 3]
         }
-        unit.save(function(err) {
+        unit.save(function (err) {
             if (err)
                 res.send(err);
         });
     }
 
-    task.save(function(err) {
+    task.save(function (err) {
         if (err)
             res.send(err);
         else
@@ -85,5 +88,131 @@ var addSingleTask = (res) => {
             });
     });
 }
+
+var addSentimentTask = (res) => {
+    var task = new Task();
+    task.name = 'Some Sentiment task for D. Trump tweets';
+    task.requester_id = 'whateveridfromsomerequesterinstring';
+    task.content_definition.content_type = 'TEXT';
+    task.content_definition.content_fields = {
+        'text': 'content.tweet_text',
+    };
+    task.questions = [{
+        question: 'What is the sentiment of the tweet text shown?',
+        response_definition: {
+            'response_type': 'SELECT',
+            'response_select_options': [
+                'positivie', 'negative', 'neutral'
+            ]
+        }
+    }];
+
+    tweets = [
+        {'tweet_id': Math.floor(Math.random() * 1000) + 1000, 'tweet_text': 'This is awesome!.'},
+        {'tweet_id': Math.floor(Math.random() * 1000) + 1000, 'tweet_text': 'This is stupd!.'},
+        {'tweet_id': Math.floor(Math.random() * 1000) + 1000, 'tweet_text': 'This is fine.'}
+    ];
+
+    for (var i = 0; i < tweets.length; i++) {
+        var unit = new Unit();
+        unit.task_id = task.id;
+        unit.content = tweets[i];
+
+        unit.save(function (err) {
+            if (err)
+                res.send(err);
+        });
+    }
+
+    task.save(function (err) {
+        if (err)
+            res.send(err);
+        else
+            console.log('sentiment twitter seeded')
+    });
+}
+
+var addLocalFilesTask = (res) => {
+    var task = new Task();
+    task.name = 'Some local folder images task for pipeline';
+    task.requester_id = 'whateveridfromsomerequesterinstring';
+    task.content_definition.content_type = 'IMAGE_LIST';
+    task.content_definition.content_fields = {
+        'image_1': 'content.image_url',
+    };
+    task.questions = [{
+        question: 'What do you think of the image shown?',
+        response_definition: {
+            'response_type': 'SELECT',
+            'response_select_options': [
+                'nice', 'awful'
+            ]
+        }
+    }];
+
+    images = [
+        {'image_url': 'https://www.dropbox.com/s/49e0ij21awcaqx4/trump2.jpg?dl=0'},
+        {'image_url': 'https://www.dropbox.com/s/pht7c0fp5sjgol9/trump3.jpg?dl=0'}
+    ];
+
+    for (var i = 0; i < images.length; i++) {
+        var unit = new Unit();
+        unit.task_id = task.id;
+        unit.content = images[i];
+
+        unit.save(function (err) {
+            if (err)
+                res.send(err);
+        });
+    }
+
+    task.save(function (err) {
+        if (err)
+            res.send(err);
+        else
+            console.log('local images dropbox seeded')
+    });
+}
+
+
+var addContentCreationTask = (res) => {
+    var task = new Task();
+    task.name = 'Content creation task';
+    task.requester_id = 'whateveridfromsomerequesterinstring';
+    task.content_definition.content_type = 'TEXT';
+    task.content_definition.content_fields = {
+        'text': 'content.content_description',
+    };
+    task.questions = [{
+        question: 'Please make an image of some nice buildings in Delft city.',
+        response_definition: {
+            'response_type': 'IMAGE',
+        }
+    }];
+
+    descriptions = [
+        {'content_description': 'Please make a picture of the old churge between 9 and 10 am.'},
+        {'content_description': 'Please make a picture of the new train station between 17:00 and 18:00.'}
+    ];
+
+    for (var i = 0; i < descriptions.length; i++) {
+        var unit = new Unit();
+        unit.task_id = task.id;
+        unit.content = descriptions[i];
+
+        unit.save(function (err) {
+            if (err)
+                res.send(err);
+        });
+    }
+
+    task.save(function (err) {
+        if (err)
+            res.send(err);
+        else
+            console.log('content creation task seeded')
+    });
+}
+
 
 module.exports = router;

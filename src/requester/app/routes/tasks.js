@@ -117,7 +117,6 @@ router.route('/:task_id/units')
                 unit.save(function(err) {
                     if (err)
                         res.send(err);
-
                     res.json({
                         message: 'Unit created and added to task!'
                     });
