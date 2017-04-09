@@ -5,7 +5,7 @@ var dbx = new Dropbox({accessToken: 'PUTNQdITp2UAAAAAAAASr04_JGUMS4kULPe9DU3LvNr
 /**
  * Harcoded task id. Should be known to the user (requester) and can therefore be hardcoded.
  */
-const existingTaskId = '58ea26e5a2acd1001fe063c0';
+const existingTaskId = '58ea38b597c2340020894e40';
 const taskUrl = 'http://localhost:3333/api/tasks/' + existingTaskId;
 const taskUnitsUrl = taskUrl + '/units';
 
@@ -45,8 +45,7 @@ const insertNewUnits = () => {
         response.entries.forEach(file => {
 
             dbx.sharingCreateSharedLinkWithSettings({path: file.path_lower}).then(function(response) {
-                const url = response.url
-                url.replace('dl=0', 'dl=1'); // Not so clean.
+                const url = response.url.substr(0,response.url.length -1) + '1' // To make sure it becomes visible in Telegram. Not so clean.
                 insertUnit(url);
             }).catch(function(error) {
                 if (error.status === 409) {

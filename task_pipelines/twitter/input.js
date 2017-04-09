@@ -3,7 +3,7 @@ var Twitter = require('twitter-node-client').Twitter;
 /**
  * Harcoded task id. Should be known to the user (requester) and can therefore be hardcoded.
  */
-const existingTaskId = '58ea26e5a2acd1001fe063be';
+const existingTaskId = '58ea38b597c2340020894e3e';
 const taskUrl = 'http://localhost:3333/api/tasks/' + existingTaskId;
 const taskUnitsUrl = taskUrl + '/units';
 
