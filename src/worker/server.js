@@ -28,8 +28,8 @@ var port = /*process.env.PORT || */ 3000;
 
 /* ========== TELEGRAM SETUP ============= */
 // replace the value below with the Telegram token you receive from @BotFather 
-// var token = '295147674:AAERxZjce89nISZpVfBMbyJDK6FIHE8u1Zw';
-var token = '334665274:AAHal-GI-g_Os4OiSOQ04D7h1pUY_98Slgo';
+var token = '295147674:AAERxZjce89nISZpVfBMbyJDK6FIHE8u1Zw';
+// var token = '334665274:AAHal-GI-g_Os4OiSOQ04D7h1pUY_98Slgo';
 
 // Create a bot that uses 'polling' to fetch new updates
 var bot = new Tgfancy(token, {polling: true, orderedSending: true});
@@ -334,11 +334,9 @@ var executeState = function(chatId, msg) {
             if (msg.text === 'yes, i want to quit') {
                 setState(chatId, 'quit_chat');
                 executeState(chatId, msg);
-                //TODO: unfinished task returned, back in the tasks 'to do' list.
             } else if (msg.text === 'no, i want to continue with the task') {
-                bot.sendMessage(chatId, 'return to task here');
-                setState(chatId, 'task_init') //--> not right state maybe?
-                executeState(chatId, msg); //TODO: return to last question asked
+                setState(chatId, 'task_ask_question');
+                executeState(chatId, msg); 
             }
             break;
         case 'quit_chat':
