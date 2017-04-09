@@ -48,7 +48,7 @@ conn.once('open', function () {
     console.log('Connected successfully to MongoDB');
 });
 
-const REVIEW_CHANCE = 1.0
+const REVIEW_CHANCE = 0
 
 /* ======================= */
 
@@ -79,8 +79,8 @@ var getTask = function(chatId) {
     return activeTask[chatId];
 };
 
-var setTask = function(chatId, unit) {
-    activeTask[chatId] = unit;
+var setTask = function(chatId, task) {
+    activeTask[chatId] = task;
 };
 
 var getUnit = function(chatId) {
@@ -279,6 +279,7 @@ var executeState = function(chatId, msg) {
                 setState(chatId, 'task_init');
                 executeState(chatId, msg)
             }).catch(err => {
+                console.log(err)
                 bot.sendMessage(chatId, "Sorry, but I do not know that task.");
                 setState(chatId, 'start');
                 executeState(chatId, msg);
