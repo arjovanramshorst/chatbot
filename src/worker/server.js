@@ -224,8 +224,11 @@ var executeState = function(chatId, msg) {
             break;
         case 'task_info': // give the user some info about the task before starting
             task = getTask(chatId);
-            if (task && 'description' in task)
+
+            //if a description exists, send it
+            if (task && task.description) {
                 bot.sendMessage(chatId, task.description);
+            }
 
             setState(chatId, 'task_init');
             executeState(chatId, msg);
@@ -237,33 +240,51 @@ var executeState = function(chatId, msg) {
             task = getTask(chatId);
 
             Unit.findOne({task_id: task._id, 'solutions': {$not: {$elemMatch: {user_id: chatId}}}}, function (err, unit) {
-                if(unit === null) {
-                    bot.sendMessage(chatId, "Enough other people are already working on this task at the moment. Please select another.");
-                    setState(chatId, 'start');
-                    executeState(chatId, msg);
-                }
-                else {
-                    initQuestionCounter(chatId);
-                    setUnit(chatId, unit);
-
-                    // process all unit content
-                    switch (task.content_definition.content_type) {
-                        case 'IMAGE_LIST':
-                            Object.keys(unit.content).forEach(function (key) {
-                                bot.sendPhoto(chatId, unit.content[key], {});
-                            });
-                            break;
-                        case 'TEXT_LIST':
-                            Object.keys(unit.content).forEach(function (key) {
-                                bot.sendMessage(chatId, unit.content[key], {});
-                            });
-                            break;
-                        default:
-                            bot.sendMessage(chatId, "Please perform the following task");
+                if (err) {
+                    console.log(err);
+                    setState(chatId, 'new');
+                } else {
+                    if (unit === null) {
+                        bot.sendMessage(chatId, "Enough other people are already working on this task at the moment. Please select another.");
+                        setState(chatId, 'start');
+                        executeState(chatId, msg);
                     }
+                    else {
+                        initQuestionCounter(chatId);
+                        setUnit(chatId, unit);
 
-                    setState(chatId, 'task_ask_question');
-                    executeState(chatId, msg);
+                        // process all unit content
+                        switch (task.content_definition.content_type) {
+                            case 'IMAGE_LIST':
+                                Object.keys(unit.content).forEach(function (key) {
+                                    bot.sendPhoto(chatId, unit.content[key], {});
+                                });
+                                break;
+                            case 'TEXT_LIST':
+                                //find all unit fields that are declared in the task
+                                var taskFields = task.content_definition.content_fields;
+                                var fields = [];
+                                Object.keys(taskFields).forEach(function (key) {
+                                    if (taskFields.hasOwnProperty(key)) {
+                                        var value = taskFields[key];
+                                        fields.push(value.substr(value.lastIndexOf(".") + 1));
+                                    }
+                                });
+
+                                //print all declared unit contents
+                                Object.keys(unit.content).forEach(function (key) {
+                                    if(fields.indexOf(key) !== -1) {
+                                        bot.sendMessage(chatId, unit.content[key], {});
+                                    }
+                                });
+                                break;
+                            default:
+                                bot.sendMessage(chatId, "Please perform the following task");
+                        }
+
+                        setState(chatId, 'task_ask_question');
+                        executeState(chatId, msg);
+                    }
                 }
             });
             break;
@@ -333,7 +354,6 @@ var executeState = function(chatId, msg) {
                 pushAnswer(chatId, msg.photo);
                 valid_answer = true;
             } else {
-                console.log(question.response_definition);
                 valid_answer = false;
             }
 
@@ -365,7 +385,7 @@ var executeState = function(chatId, msg) {
             bot.sendMessage(chatId, "Good job! You finished the task. Lets do another one!");
 
             //serve a new unit of same task
-            setState(chatId, 'task_init');
+            setState(chatId, 'task_info');
             executeState(chatId, msg);
             break;
         case 'quit_task': // to quit while doing a task
