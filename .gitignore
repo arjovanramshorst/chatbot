@@ -20,6 +20,7 @@
 
 /task_pipelines/dropbox/node_modules
 /task_pipelines/twitter/node_modules
+/task_pipelines/twitter/file.csv
 
 /requester/node_modules
 /worker/node_modules
