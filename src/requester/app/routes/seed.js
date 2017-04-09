@@ -49,6 +49,12 @@ var addSingleTask = (res) => {
                 'response_type': 'NUMBER',
             },
         },
+        {
+            question: 'Send a picture?',
+            response_definition: {
+                'reponse_type': 'IMAGE',
+            }
+        }
     ];
 
     image_urls = [
