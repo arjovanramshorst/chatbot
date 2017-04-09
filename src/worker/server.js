@@ -375,6 +375,11 @@ var executeState = function(chatId, msg) {
             break;
         case 'quit_chat':
             setState(chatId, 'start');
+
+            //clear saved data
+            clearAnswers(chatId);
+            clearQuestionCounter(chatId);
+            
             bot.sendMessage(chatId, 'Bye for now!');
             break;
         default:
