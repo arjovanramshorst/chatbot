@@ -24,7 +24,7 @@ const removeAllTasks = (res) => {
 const addSentimentTask = (res) => {
     var task = new Task();
     task.name = 'Delft tweet relevance judgement';
-    task.requester_id = 'whateveridfromsomerequesterinstring';
+    task.requester_id = 'hardcodedRequesterIdOne';
     task.content_definition.content_type = 'TEXT_LIST';
     task.content_definition.content_fields = {
         'text': 'content.tweet_text',
@@ -50,7 +50,7 @@ const addSentimentTask = (res) => {
 const addLocalFilesTask = (res) => {
     var task = new Task();
     task.name = 'Delft image archive categorization';
-    task.requester_id = 'whateveridfromsomerequesterinstring';
+    task.requester_id = 'hardcodedRequesterIdTwo';
     task.content_definition.content_type = 'IMAGE_LIST';
     task.content_definition.content_fields = {
         'image_1': 'content.image_url',
@@ -95,7 +95,7 @@ const addLocalFilesTask = (res) => {
 const addContentCreationTask = (res) => {
     var task = new Task();
     task.name = 'Content creation task';
-    task.requester_id = 'whateveridfromsomerequesterinstring';
+    task.requester_id = 'hardcodedRequesterIdThree';
     task.content_definition.content_type = 'TEXT_LIST';
     task.content_definition.content_fields = {
         'text': 'content.content_description',

@@ -27,7 +27,7 @@ app.use(bodyParser.json());
 var port = /*process.env.PORT || */ 3000;
 
 /* ========== TELEGRAM SETUP ============= */
-// replace the value below with the Telegram token you receive from @BotFather 
+// replace the value below with the Telegram token you receive from @BotFather
 //var token = '295147674:AAERxZjce89nISZpVfBMbyJDK6FIHE8u1Zw'; //Lizzy, username: @buck_a_bot
 //var token = '334665274:AAHal-GI-g_Os4OiSOQ04D7h1pUY_98Slgo'; //Bjorn, username: @BuckABot
 //var token = '373349364:AAGPbNZb8tdCBabVGCQMm_vG_UBjAh7_rkY'; //Arjo, username: @bucky_two_bot
@@ -347,7 +347,7 @@ var executeState = function(chatId, msg) {
                 executeState(chatId, msg);
             } else if (msg.text === 'no, i want to continue with the task') {
                 setState(chatId, 'task_ask_question');
-                executeState(chatId, msg); 
+                executeState(chatId, msg);
             }
             break;
         case 'quit_chat':
@@ -420,7 +420,7 @@ bot.onText(/\/quit/, function (msg) {
                 resize_keyboard: true
             })
         });
-        setState(chatId, 'quit_task'); 
+        setState(chatId, 'quit_task');
         executeState(chatId, msg);
     } else {
         setState(chatId, 'quit_chat');
