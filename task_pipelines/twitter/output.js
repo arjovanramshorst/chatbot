@@ -4,7 +4,7 @@ var fs = require('fs');
 /**
  * Harcoded task id. Should be known to the user (requester) and can therefore be hardcoded.
  */
-const existingTaskId = '58e9feb95020aa002d0ab018';
+const existingTaskId = '58ea2224833029001fb5d00b';
 const taskUrl = 'http://localhost:3333/api/tasks/' + existingTaskId;
 const taskUnitsUrl = taskUrl + '/units';
 
@@ -20,7 +20,7 @@ request(taskUrl, function(error, response, body) {
 const outputCSV = () => {
     request(taskUnitsUrl, function(error, response, body) {
         if (!error) {
-            const fields = ['tweet_id', 'tweet_text', 'rated_positive', 'rated_neutral', 'rated_negative'];
+            const fields = ['tweet_id', 'tweet_text', 'yes', 'no', 'dont_know'];
             const units = JSON.parse(body);
             const data = [];
 
@@ -31,11 +31,11 @@ const outputCSV = () => {
                 const negatives = 0;
 
                 for (var j = 0; j < solutions.length; j++) {
-                    if (solutions[j].responses[0] == 'positive') {
+                    if (solutions[j].responses[0].toLowerCase() == 'yes') {
                         positives = positives + 1;
-                    } else if (solutions[j].responses[0] == 'negatives') {
+                    } else if (solutions[j].responses[0].toLowerCase() == 'no') {
                         negatives = negatives + 1;
-                    } else if (solutions[j].responses[0] == 'neutrals') {
+                    } else if (solutions[j].responses[0].toLowerCase() == 'i dont know') {
                         neutrals = neutrals + 1
                     }
                 }
@@ -43,9 +43,9 @@ const outputCSV = () => {
                 data.push({
                   'tweet_id': units[i].content.tweet_id,
                   'tweet_text': units[i].content.tweet_text,
-                  'rated_positive': positives,
-                  'rated_neutral': neutrals,
-                  'rated_negative': negatives
+                  'yes': positives,
+                  'no': negatives,
+                  'dont_know': neutrals
                 });
             }
 

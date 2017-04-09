@@ -28,8 +28,10 @@ var port = /*process.env.PORT || */ 3000;
 
 /* ========== TELEGRAM SETUP ============= */
 // replace the value below with the Telegram token you receive from @BotFather 
-var token = '295147674:AAERxZjce89nISZpVfBMbyJDK6FIHE8u1Zw';
-// var token = '334665274:AAHal-GI-g_Os4OiSOQ04D7h1pUY_98Slgo';
+//var token = '295147674:AAERxZjce89nISZpVfBMbyJDK6FIHE8u1Zw'; //Lizzy, username: @buck_a_bot
+var token = '334665274:AAHal-GI-g_Os4OiSOQ04D7h1pUY_98Slgo'; //Bjorn, username: @@BuckABot
+//var token = '373349364:AAGPbNZb8tdCBabVGCQMm_vG_UBjAh7_rkY'; //Arjo, username: @bucky_two_bot
+//var token = '361869218:AAEcJhYl42u9FmynLhp1Ti5VKRzlEladmDk'; //Joost, username: @bucky_three_bot
 
 // Create a bot that uses 'polling' to fetch new updates
 var bot = new Tgfancy(token, {polling: true, orderedSending: true});
@@ -53,7 +55,6 @@ var activeTask = {};
 var activeUnit = {};
 var questionCounter = {};
 var activeTaskAnswers = {};
-var activeReview = {};
 
 var commands = [
     '/start',
@@ -261,27 +262,34 @@ var executeState = function(chatId, msg) {
             task = getTask(chatId);
 
             Unit.findOne({task_id: task._id}, function (err, unit) {
-                initQuestionCounter(chatId);
-                setUnit(chatId, unit);
-
-                // process all unit content
-                switch (task.content_definition.content_type) {
-                    case 'IMAGE_LIST':
-                        Object.keys(unit.content).forEach(function (key) {
-                            bot.sendPhoto(chatId, unit.content[key], {});
-                        });
-                        break;
-                    case 'TEXT_LIST':
-                        Object.keys(unit.content).forEach(function (key) {
-                            bot.sendMessage(chatId, unit.content[key], {});
-                        });
-                        break;
-                    default:
-                        bot.sendMessage(chatId, "Please perform the following task");
+                if(unit === null) {
+                    bot.sendMessage(chatId, "Enough other people are already working on this task at the moment. Please select another.");
+                    setState(chatId, 'start');
+                    executeState(chatId, msg);
                 }
+                else {
+                    initQuestionCounter(chatId);
+                    setUnit(chatId, unit);
 
-                setState(chatId, 'task_ask_question');
-                executeState(chatId, msg);
+                    // process all unit content
+                    switch (task.content_definition.content_type) {
+                        case 'IMAGE_LIST':
+                            Object.keys(unit.content).forEach(function (key) {
+                                bot.sendPhoto(chatId, unit.content[key], {});
+                            });
+                            break;
+                        case 'TEXT_LIST':
+                            Object.keys(unit.content).forEach(function (key) {
+                                bot.sendMessage(chatId, unit.content[key], {});
+                            });
+                            break;
+                        default:
+                            bot.sendMessage(chatId, "Please perform the following task");
+                    }
+
+                    setState(chatId, 'task_ask_question');
+                    executeState(chatId, msg);
+                }
             });
             break;
         case 'task_ask_question': // asking a question
