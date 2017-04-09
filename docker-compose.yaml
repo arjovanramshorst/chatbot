@@ -19,7 +19,7 @@ services:
       - ./src:/var/www
     ports:
       - "2222:80"
-    command: "echo hoi"
+    command: "npm run dev-worker"
     links:
       - db:db
   db:
