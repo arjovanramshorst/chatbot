@@ -279,7 +279,6 @@ var executeState = function(chatId, msg) {
                 setState(chatId, 'task_init');
                 executeState(chatId, msg)
             }).catch(err => {
-                console.log(err)
                 bot.sendMessage(chatId, "Sorry, but I do not know that task.");
                 setState(chatId, 'start');
                 executeState(chatId, msg);
@@ -314,7 +313,7 @@ var executeState = function(chatId, msg) {
                 })
 
             } else {
-                Unit.findOne({task_id: task._id}, function (err, unit) {
+            	Unit.findOne({task_id: task._id, 'solutions': {$not: {$elemMatch: {user_id: chatId}}}}, function (err, unit) {
                     if(unit === null) {
                         bot.sendMessage(chatId, "Enough other people are already working on this task at the moment. Please select another.");
                         setState(chatId, 'start');
@@ -483,7 +482,7 @@ var executeState = function(chatId, msg) {
         case 'task_complete': // clean up when task is complete
             //save the solution to the task
             saveAnswers(getAnswers(chatId), chatId, getUnit(chatId));
-            bot.sendMessage(chatId, "The task is complete!");
+            bot.sendMessage(chatId, "Good job! You finished the task. Lets do another one!");
 
             setState(chatId, 'start');
             executeState(chatId, msg);
