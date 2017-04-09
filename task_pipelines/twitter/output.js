@@ -4,7 +4,7 @@ var fs = require('fs');
 /**
  * Harcoded task id. Should be known to the user (requester) and can therefore be hardcoded.
  */
-const existingTaskId = '58ea2224833029001fb5d00b';
+const existingTaskId = '58ea26e5a2acd1001fe063be';
 const taskUrl = 'http://localhost:3333/api/tasks/' + existingTaskId;
 const taskUnitsUrl = taskUrl + '/units';
 
