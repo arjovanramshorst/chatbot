@@ -28,8 +28,8 @@ var port = /*process.env.PORT || */ 3000;
 
 /* ========== TELEGRAM SETUP ============= */
 // replace the value below with the Telegram token you receive from @BotFather 
-var token = '295147674:AAERxZjce89nISZpVfBMbyJDK6FIHE8u1Zw';
-// var token = '334665274:AAHal-GI-g_Os4OiSOQ04D7h1pUY_98Slgo';
+//var token = '295147674:AAERxZjce89nISZpVfBMbyJDK6FIHE8u1Zw';
+var token = '334665274:AAHal-GI-g_Os4OiSOQ04D7h1pUY_98Slgo';
 
 // Create a bot that uses 'polling' to fetch new updates
 var bot = new Tgfancy(token, {polling: true, orderedSending: true});
@@ -184,7 +184,8 @@ var executeState = function(chatId, msg) {
                 bot.sendMessage(chatId, "What task would you like to do?", {
                     reply_markup: JSON.stringify({
                         one_time_keyboard: true,
-                        keyboard: taskNames
+                        keyboard: taskNames,
+                        resize_keyboard: true
                     })
                 });
 
@@ -246,7 +247,8 @@ var executeState = function(chatId, msg) {
                     bot.sendMessage(chatId, question.question, {
                         reply_markup: JSON.stringify({
                             one_time_keyboard: true,
-                            keyboard: answers
+                            keyboard: answers,
+                            resize_keyboard: true
                         })
                     });
                     break;
@@ -405,7 +407,8 @@ bot.onText(/\/quit/, function (msg) {
                 keyboard: [
                    ['yes, i want to quit'],
                    ['no, i want to continue with the task']
-                ]
+                ],
+                resize_keyboard: true
             })
         });
         setState(chatId, 'quit_task'); 
