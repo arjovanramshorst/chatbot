@@ -10,6 +10,7 @@ router.get('/reset-and-seed', function (req, res) {
     addImageListTask(res)
     addSentimentTask(res)
     addLocalFilesTask(res)
+    addContentCreationTask(res)
 });
 
 var removeAllTasks = () => {
@@ -163,7 +164,47 @@ var addLocalFilesTask = (res) => {
         if (err)
             res.send(err);
         else
-            console.log('local images twitter seeded')
+            console.log('local images dropbox seeded')
+    });
+}
+
+
+var addContentCreationTask = (res) => {
+    var task = new Task();
+    task.name = 'Content creation task';
+    task.requester_id = 'whateveridfromsomerequesterinstring';
+    task.content_definition.content_type = 'TEXT';
+    task.content_definition.content_fields = {
+        'text': 'content.content_description',
+    };
+    task.questions = [{
+        question: 'Please make an image of some nice buildings in Delft city.',
+        response_definition: {
+            'response_type': 'IMAGE',
+        }
+    }];
+
+    descriptions = [
+        {'content_description': 'Please make a picture of the old churge between 9 and 10 am.'},
+        {'content_description': 'Please make a picture of the new train station between 17:00 and 18:00.'}
+    ];
+
+    for (var i = 0; i < descriptions.length; i++) {
+        var unit = new Unit();
+        unit.task_id = task.id;
+        unit.content = descriptions[i];
+
+        unit.save(function (err) {
+            if (err)
+                res.send(err);
+        });
+    }
+
+    task.save(function (err) {
+        if (err)
+            res.send(err);
+        else
+            console.log('content creation task seeded')
     });
 }
 
