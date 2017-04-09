@@ -28,8 +28,8 @@ var port = /*process.env.PORT || */ 3000;
 
 /* ========== TELEGRAM SETUP ============= */
 // replace the value below with the Telegram token you receive from @BotFather 
-//var token = '295147674:AAERxZjce89nISZpVfBMbyJDK6FIHE8u1Zw';
-var token = '334665274:AAHal-GI-g_Os4OiSOQ04D7h1pUY_98Slgo';
+var token = '295147674:AAERxZjce89nISZpVfBMbyJDK6FIHE8u1Zw';
+// var token = '334665274:AAHal-GI-g_Os4OiSOQ04D7h1pUY_98Slgo';
 
 // Create a bot that uses 'polling' to fetch new updates
 var bot = new Tgfancy(token, {polling: true, orderedSending: true});
@@ -53,6 +53,7 @@ var activeTask = {};
 var activeUnit = {};
 var questionCounter = {};
 var activeTaskAnswers = {};
+var activeReview = {};
 
 var commands = [
     '/start',
@@ -138,6 +139,57 @@ const fetchTask = (query = {}) => {
 }
 
 const fetchTaskByName = (name) => fetchTask({name: name});
+
+const fetchUnitsForTask = (task) => {
+    return new Promise((resolve, reject) => {
+        Unit.find({task_id: task._id}, (err, units) => {
+            if(err) {
+                reject(err)
+            } else {
+                resolve(units)
+            }
+        })
+    })
+}
+
+const storeReview = (unit, chat_id, review) => {
+    unit.solutions.map(solution => {
+        if(solution.user_id === chat_id) {
+            console.log('solution is successfully reviewed');
+            solution.review = review;
+        }
+        return solution;
+    })
+    unit.save((err) => {
+        if(err) {
+            console.log(err)
+        } else {
+            console.log('Review stored successfully')
+        }
+    });
+}
+
+const getReviewSolution = (units) => {
+    const reviewSolutions = units.filter(unit => {
+        // Filter units that require at least one solution to be reviewed.
+        return unit.solutions.findIndex(solution => solution.reviewed === 'pending') !== -1;
+    }).map(unit => {
+        // map units with the list of solutions that need to be reviewed.
+        return {
+            unit: unit,
+            solutions: unit.solutions.filter(solution => solution.reviewed === 'pending')
+        }
+    });
+    if (reviewSolutions.length > 0) {
+        // Return the first unit with the user_id of a solution in an object.
+        return {
+            unit: reviewSolutions[0].unit,
+            user_id: reviewSolutions[0].solutions[0].chat_id
+        };
+    }
+
+    return null;
+}
 
 // Listen for any kind of message. There are different kinds of messages.
 bot.on('message', function (msg) {
@@ -324,6 +376,19 @@ var executeState = function(chatId, msg) {
 
             executeState(chatId, msg);
             break;
+        case 'review_question':
+
+            break;
+        case 'review_awaiting':
+
+            break;
+        case 'review_complete':
+            saveReview(getAnswers(chatId), chatId, getUnit(chatId));
+            bot.sendMesssage(chatId, "The review is complete!");
+
+            setState(chatId, 'start');
+            executeState(chatId, msg);
+            break;
         case 'task_complete': // clean up when task is complete
             //save the solution to the task
             saveAnswers(getAnswers(chatId), chatId, getUnit(chatId));
@@ -355,7 +420,6 @@ var executeState = function(chatId, msg) {
 const saveAnswers = (answers, chatId, unit) => {
     unit.solutions.push({
         responses: answers,
-        reviewed: 'PENDING',
         user_id: chatId,
     });
 
