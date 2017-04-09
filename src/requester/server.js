@@ -31,13 +31,13 @@ conn.once('open', function() {
 
 var commonRoutes = require('./app/routes/common');
 var seedRoutes = require('./app/routes/seed');
-var externalRoutes = require('./app/routes/external')
 var taskRoutes = require('./app/routes/tasks');
+var requesterRoutes = require('./app/routes/requester');
 // register routes
 app.use('/seed', seedRoutes);
 app.use('/api', commonRoutes);
-app.use('/api/external', externalRoutes);
 app.use('/api/tasks', taskRoutes);
+app.use('/api/requester', requesterRoutes);
 
 /**
  * Start server

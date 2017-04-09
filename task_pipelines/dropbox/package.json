@@ -1,0 +1,8 @@
+{
+  "name": "crowdsource-dropbox-external",
+  "version": "1.0.0",
+  "dependencies": {
+    "dropbox": "^2.5.2",
+    "request": "^2.81.0"
+  }
+}
