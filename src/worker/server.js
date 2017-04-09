@@ -14,7 +14,6 @@ var Tgfancy = require("tgfancy");
 
 var Task = require('../core/models/task');
 var Unit = require('../core/models/unit');
-var Solution = require('../core/models/solution');
 
 // configure app
 app.use(morgan('dev')); // log requests to the console
