@@ -1,8 +1,32 @@
-# Chatbots for Microwork.
-## Setting up Rasa NLU
-`pip install rasa_nlu` <br />
-`pip install git+https://github.com/mit-nlp/MITIE.git`
+# Bucky, the Chatbot of Microwork.
 
-## Opstarten server
-`python -m rasa_nlu.server -c config.json --server_model_dir=./Models/model_YYYYMMDD-HHMMS` <br />
-`nodemon server.js` or run `start_worker.sh`
+## Installation
+Go to the `/src` directory and run `npm install`.
+
+## Deployment
+To deploy the crowdsourcing platform, go to the root directory and execute the following steps.
+
+### Step 1
+Execute command:
+
+``
+docker-compose up
+``
+
+(For instructions on how to install docker-compose, click [here](https://docs.docker.com/compose/install/))
+
+### Step 2
+Navigate your browser to `localhost:3333/seed/reset-and-seed` to build and fill the database.
+
+## Instructions for workers
+Bucky can be found on Telegram. Just search for `@buck_a_bot` in the Telegram search bar.
+
+## Instructions for requesters
+TODO ARJO
+
+## Using the pipelines
+TODO JOOST
+
+### Twitter
+
+### Dropbox

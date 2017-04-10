@@ -4,17 +4,17 @@
 // =============================================================================
 
 // call the packages we need
-var express = require('express');
-var bodyParser = require('body-parser');
-var app = express();
-var morgan = require('morgan');
-var request = require('request');
+const express = require('express');
+const bodyParser = require('body-parser');
+const app = express();
+const morgan = require('morgan');
+const request = require('request');
 
-var Tgfancy = require("tgfancy");
+const Tgfancy = require("tgfancy");
 
-var Task = require('../core/models/task');
-var Unit = require('../core/models/unit');
-var Solution = require('../core/models/solution');
+const Task = require('../core/models/task');
+const Unit = require('../core/models/unit');
+const Solution = require('../core/models/solution');
 
 // configure app
 app.use(morgan('dev')); // log requests to the console
@@ -24,29 +24,29 @@ app.use(bodyParser.urlencoded({extended: true}));
 app.use(bodyParser.json());
 
 // set port
-var port = /*process.env.PORT || */ 3000;
+const port = /*process.env.PORT || */ 3000;
 
 /* ========== TELEGRAM SETUP ============= */
 // replace the value below with the Telegram token you receive from @BotFather 
-//var token = '295147674:AAERxZjce89nISZpVfBMbyJDK6FIHE8u1Zw'; //Lizzy, username: @buck_a_bot
-// var token = '334665274:AAHal-GI-g_Os4OiSOQ04D7h1pUY_98Slgo'; //Bjorn, username: @@BuckABot
-// var token = '373349364:AAGPbNZb8tdCBabVGCQMm_vG_UBjAh7_rkY'; //Arjo, username: @bucky_two_bot
-//var token = '361869218:AAEcJhYl42u9FmynLhp1Ti5VKRzlEladmDk'; //Joost, username: @bucky_three_bot
+//const token = '295147674:AAERxZjce89nISZpVfBMbyJDK6FIHE8u1Zw'; //Lizzy, username: @buck_a_bot
+// const token = '334665274:AAHal-GI-g_Os4OiSOQ04D7h1pUY_98Slgo'; //Bjorn, username: @@BuckABot
+// const token = '373349364:AAGPbNZb8tdCBabVGCQMm_vG_UBjAh7_rkY'; //Arjo, username: @bucky_two_bot
+//const token = '361869218:AAEcJhYl42u9FmynLhp1Ti5VKRzlEladmDk'; //Joost, username: @bucky_three_bot
 //
 const localConfig = require('./env')
 
 const token = localConfig.token
 
 // Create a bot that uses 'polling' to fetch new updates
-var bot = new Tgfancy(token, {polling: true, orderedSending: true});
+const bot = new Tgfancy(token, {polling: true, orderedSending: true});
 
 /* ========== MONGODB SETUP ============= */
 // connect to mongodb
-var mongoose = require('mongoose');
+const mongoose = require('mongoose');
 mongoose.connect('db');
 
 // verify connection to mongodb
-var conn = mongoose.connection;
+const conn = mongoose.connection;
 conn.on('error', console.error.bind(console, 'connection error:'));
 conn.once('open', function () {
     console.log('Connected successfully to MongoDB');
@@ -56,14 +56,14 @@ const REVIEW_CHANCE = 1
 
 /* ======================= */
 
-var stateTracker = {};
-var activeTask = {};
-var activeUnit = {};
-var questionCounter = {};
-var activeTaskAnswers = {};
-var activeReview = {};
+const stateTracker = {};
+const activeTask = {};
+const activeUnit = {};
+const questionCounter = {};
+const activeTaskAnswers = {};
+const activeReview = {};
 
-var commands = [
+const commands = [
     '/start',
     '/reset',
     '/choosetask',
@@ -71,46 +71,46 @@ var commands = [
     '/quit' // TODO
 ];
 
-var getState = function(chatId) {
+const getState = function(chatId) {
     return stateTracker[chatId];
 };
 
-var setState = function(chatId, state) {
+const setState = function(chatId, state) {
     stateTracker[chatId] = state;
 };
 
-var getTask = function(chatId) {
+const getTask = function(chatId) {
     return activeTask[chatId];
 };
 
-var setTask = function(chatId, task) {
+const setTask = function(chatId, task) {
     activeTask[chatId] = task;
 };
 
-var getUnit = function(chatId) {
+const getUnit = function(chatId) {
     return activeUnit[chatId];
 };
 
-var setUnit = function(chatId, unit) {
+const setUnit = function(chatId, unit) {
     activeUnit[chatId] = unit;
 };
 
-var setReviewUserId = function(chatId, userId) {
+const setReviewUserId = function(chatId, userId) {
     activeReview[chatId] = userId
 }
 
-var getReviewUserId = function(chatId) {
+const getReviewUserId = function(chatId) {
     return activeReview[chatId]
 }
 
-var pushAnswer = function(chatId, answer) {
+const pushAnswer = function(chatId, answer) {
     if(chatId in activeTaskAnswers === false) {
         activeTaskAnswers[chatId] = [];
     }
     activeTaskAnswers[chatId].push(answer);
 };
 
-var getAnswers = function(chatId) {
+const getAnswers = function(chatId) {
     if(chatId in activeTaskAnswers) {
         return activeTaskAnswers[chatId];
     } else {
@@ -118,16 +118,31 @@ var getAnswers = function(chatId) {
     }
 };
 
-var initQuestionCounter = function(chatId) {
+const clearAnswers = function(chatId) {
+    if(chatId in activeTaskAnswers) {
+        activeTaskAnswers[chatId] = [];
+    }
+};
+
+const initQuestionCounter = function(chatId) {
     questionCounter[chatId] = 0;
 };
 
-var incrementQuestionCounter = function(chatId) {
+const incrementQuestionCounter = function(chatId) {
     questionCounter[chatId] += 1;
 };
 
-var getQuestionCounter = function(chatId) {
+const clearQuestionCounter = function(chatId) {
+    delete questionCounter[chatId];
+};
+
+const getQuestionCounter = function(chatId) {
     return questionCounter[chatId];
+};
+
+const clearTemporaryData = function(chatId) {
+    clearAnswers(chatId);
+    clearQuestionCounter(chatId);
 };
 
 const fetchTasks = (query = {}) => {
@@ -151,6 +166,26 @@ const fetchTask = (query = {}) => {
                 resolve(task)
             }
         })
+    })
+}
+
+const saveAnswers = (answers, chatId, unit) => {
+    return new Promise((resolve, reject) => {
+        unit.solutions.push({
+            responses: answers,
+            reviewed: 'PENDING',
+            user_id: chatId,
+        });
+        unit.save(function(err) {
+            if (err) {
+                console.error(err);
+                reject(err);
+            }
+            else {
+                console.log("Saved answers successfully!");
+                resolve(unit);
+            }
+        });
     })
 }
 
@@ -282,14 +317,23 @@ const executeState = (chatId, msg) => {
         case 'task_choice_pending': // waiting for user to select task
             fetchTaskByName(msg.text).then(result => {
                 setTask(chatId, result);
-                setState(chatId, 'task_init');
-                executeState(chatId, msg)
+                setState(chatId, 'task_info');
+                executeState(chatId, msg);
             }).catch(err => {
-                console.log(err)
                 bot.sendMessage(chatId, "Sorry, but I do not know that task.");
                 setState(chatId, 'start');
                 executeState(chatId, msg);
             });
+            break;
+        case 'task_info': // give the user some info about the task before starting
+
+            //if a description exists, send it
+            if (task && task.description) {
+                bot.sendMessage(chatId, task.description);
+            }
+
+            setState(chatId, 'task_init');
+            executeState(chatId, msg);
             break;
         case 'task_init': // sending data from unit
             if(Math.random() < REVIEW_CHANCE) { // Do review task
@@ -317,28 +361,43 @@ const executeState = (chatId, msg) => {
                         // Do something else when no review task is available?
                     }
                 })
-
             } else {
-            	Unit.findOne({task_id: task._id, 'solutions': {$not: {$elemMatch: {user_id: chatId}}}}, function (err, unit) {
-                    if(unit === null) {
-                        bot.sendMessage(chatId, "Enough other people are already working on this task at the moment. Please select another.");
-                        setState(chatId, 'start');
-                        executeState(chatId, msg);
-                    }
-                    else {
-                        initQuestionCounter(chatId);
-                        setUnit(chatId, unit);
+                Unit.findOne({task_id: task._id, 'solutions': {$not: {$elemMatch: {user_id: chatId}}}}, function (err, unit) {
+                if(unit === null) {
+                    bot.sendMessage(chatId, "Enough other people are already working on this task at the moment. Please select another.");
+                    setState(chatId, 'start');
+                    executeState(chatId, msg);
+                }
+                else {
+                    initQuestionCounter(chatId);
+                    setUnit(chatId, unit);
+
+                        //find all unit fields that are declared in the task
+                        const taskFields = task.content_definition.content_fields;
+                        let fields = [];
+                        Object.keys(taskFields).forEach(function (key) {
+                            if (taskFields.hasOwnProperty(key)) {
+                                var value = taskFields[key];
+                                fields.push(value.substr(value.lastIndexOf(".") + 1));
+                            }
+                        });
 
                         // process all unit content
                         switch (task.content_definition.content_type) {
                             case 'IMAGE_LIST':
+                                //send all declared unit contents
                                 Object.keys(unit.content).forEach(function (key) {
-                                    bot.sendPhoto(chatId, unit.content[key], {});
+                                    if(fields.indexOf(key) !== -1) {
+                                        bot.sendPhoto(chatId, unit.content[key], {});
+                                    }
                                 });
                                 break;
                             case 'TEXT_LIST':
+                                //send all declared unit contents
                                 Object.keys(unit.content).forEach(function (key) {
-                                    bot.sendMessage(chatId, unit.content[key], {});
+                                    if(fields.indexOf(key) !== -1) {
+                                        bot.sendMessage(chatId, unit.content[key], {});
+                                    }
                                 });
                                 break;
                             default:
@@ -348,7 +407,7 @@ const executeState = (chatId, msg) => {
                         setState(chatId, 'task_ask_question');
                         executeState(chatId, msg);
                     }
-                });
+				})
             }
             break;
         case 'task_ask_question': // asking a question
@@ -412,7 +471,6 @@ const executeState = (chatId, msg) => {
                 pushAnswer(chatId, msg.photo);
                 valid_answer = true;
             } else {
-                console.log(question.response_definition);
                 valid_answer = false;
             }
 
@@ -438,59 +496,38 @@ const executeState = (chatId, msg) => {
 
             executeState(chatId, msg);
             break;
-        case 'task_review_question':
-            // Show question
-            // Show answer
-            let solutionUserId = getReviewUserId(chatId)
-            const response = getResponseForQuestion(unit, solutionUserId, getQuestionCounter(chatId))
-            const reviewString = 'Is the following correct?\n Q: '+ question + '\nA: ' + response
-
-            bot.sendMessage(chatId, reviewString, {
-                reply_markup: JSON.stringify({
-                    one_time_keyboard: true,
-                    keyboard: [['yes'],['no']],
-                    resize_keyboard: true
-                })
-            })
-            break
-        case 'task_review_awaiting':
-            // Receive answer (yes or no)
-            if(msg.text && (msg.text === 'yes' || msg.text === 'no')) {
-                pushAnswer(chatId, msg.text);
-                if(getQuestionCounter(chatId) < task.questions.length - 1) {
-                    incrementQuestionCounter(chatId);
-                    setState(chatId, 'task_review_question');
-                } else {
-                    setState(chatId, 'task_review_complete');
-                }
-            } else {
-                bot.sendMessage(chatId, 'Invalid answer, requires "yes" or "no"')
-                setState(chatId, 'task_review_question')
-            }
-            executeState(chatId, msg)
-            break;
-        case 'task_review_complete':
-            saveReview(getAnswers(chatId), chatId, getUnit(chatId));
-            bot.sendMessage(chatId, "The review is complete!");
-
-            setState(chatId, 'start');
-            executeState(chatId, msg);
-            break;
         case 'task_complete': // clean up when task is complete
             //save the solution to the task
-            saveAnswers(getAnswers(chatId), chatId, getUnit(chatId));
-            bot.sendMessage(chatId, "Good job! You finished the task. Lets do another one!");
+            saveAnswers(getAnswers(chatId), chatId, getUnit(chatId)).then((unit) => {
+                bot.sendMessage(chatId, "Good job! You finished the task. Lets do another one!");
 
-            setState(chatId, 'start');
-            executeState(chatId, msg);
+                //clear saved data
+                clearTemporaryData(chatId);
+
+                //serve a new unit of same task
+                setState(chatId, 'task_info');
+                executeState(chatId, msg);
+            });
             break;
         case 'quit_task': // to quit while doing a task
             if (msg.text === 'yes, i want to quit') {
-                setState(chatId, 'quit_chat');
+                setState(chatId, 'start');
                 executeState(chatId, msg);
             } else if (msg.text === 'no, i want to continue with the task') {
                 setState(chatId, 'task_ask_question');
-                executeState(chatId, msg); 
+                executeState(chatId, msg);
+            } else {
+                bot.sendMessage(chatId, "Sorry, but I do not understand what you mean, please answer using the buttons below.", {
+                    reply_markup: JSON.stringify({
+                        one_time_keyboard: true,
+                        keyboard: [
+                           ['yes, i want to quit'],
+                           ['no, i want to continue with the task']
+                        ],
+                        resize_keyboard: true
+                    })
+                });
+                setState(chatId, 'quit_task');
             }
             break;
         case 'quit_chat':
@@ -501,22 +538,6 @@ const executeState = (chatId, msg) => {
             setState(chatId, 'new');
             executeState(chatId, msg);
     }
-};
-
-// Writes the answers for unit unitId by worker chatId to the database
-const saveAnswers = (answers, chatId, unit) => {
-    unit.solutions.push({
-        responses: answers,
-        user_id: chatId,
-    });
-
-    unit.save(function(err) {
-        if (err)
-            console.error(err);
-        else {
-            console.log("Saved answers successfully!");
-        }
-    });
 };
 
 // Matches /start
@@ -551,6 +572,8 @@ bot.onText(/\/help/, function (msg) {
 // Matches /quit
 bot.onText(/\/quit/, function (msg) {
     var chatId = msg.chat.id;
+
+    //if busy with a task, first ask for confirmation
     if (getState(chatId) === 'task_init' || getState(chatId) === 'task_ask_question' || getState(chatId) === 'task_awaiting_answer' || getState(chatId) === 'task_complete') {
         bot.sendMessage(chatId, "Are you sure you want to quit now during your task?", {
             reply_markup: JSON.stringify({
@@ -562,8 +585,7 @@ bot.onText(/\/quit/, function (msg) {
                 resize_keyboard: true
             })
         });
-        setState(chatId, 'quit_task'); 
-        executeState(chatId, msg);
+        setState(chatId, 'quit_task');
     } else {
         setState(chatId, 'quit_chat');
         executeState(chatId, msg);

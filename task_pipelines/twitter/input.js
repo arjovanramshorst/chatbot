@@ -1,19 +1,20 @@
 var request = require('request');
 var Twitter = require('twitter-node-client').Twitter;
-/**
- * Harcoded task id. Should be known to the user (requester) and can therefore be hardcoded.
- */
-const existingTaskId = '58ea38b597c2340020894e3e';
-const taskUrl = 'http://localhost:3333/api/tasks/' + existingTaskId;
-const taskUnitsUrl = taskUrl + '/units';
 
-request(taskUrl, function(error, response, body) {
-    if (error || JSON.parse(body).error) {
-        console.log('Something went wrong. Probably the id of the task is wrong.')
-    } else {
-        console.log('Found task! Lets add some tweets.');
-        insertTweets()
-    }
+const requesterId = 'hardcodedRequesterIdOne'
+const requesterTasksUrl = 'http://localhost:3333/api/requester/' + requesterId + '/tasks';
+
+request(requesterTasksUrl, function(error, response, body) {
+  const jsonBody = JSON.parse(body)
+  if(error || jsonBody.length !== 1) {
+    console.log('Something went wrong. No or multiple tasks found for this user?');
+  }
+  else {
+    const taskId = jsonBody[0]._id;
+    const taskUrl = 'http://localhost:3333/api/tasks/' + taskId;
+    const taskUnitsUrl = taskUrl + '/units';
+    insertTweets(taskUrl, taskUnitsUrl);
+  }
 });
 
 /**
@@ -80,7 +81,7 @@ const validateTweetText = (text) => {
     return true
 };
 
-const insertTweets = () => {
+const insertTweets = (taskUrl, taskUnitsUrl) => {
     const data = twitter.getSearch({
         'q': '#delft',
         'count': 100

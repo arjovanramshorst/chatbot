@@ -10,6 +10,7 @@ var router = express.Router();
 */
 router.route('/:requester_id/tasks')
     .get(function(req, res) {
+      console.log(req.params.requester_id)
         Task.find({
                 requester_id: req.params.requester_id
             },
@@ -23,30 +24,30 @@ router.route('/:requester_id/tasks')
         );
     });
 
-router.route('/:requester_id/task/:task_id/units')
-    .get(function(req, res) {
-
-        var task = Task.find({
-            requester_id: req.params.requester_id,
-            function(err, task) {
-                if (err) {
-                    res.send(err)
-                } else {
-
-                }
-            }
-        })
-
-        Unit.find({
-            task_id: task._id
-        }, function(err, units) {
-            if (err)
-                res.send(err)
-            res.json({
-                'task': task,
-                'units': units
-            });
-        });
-    });
+// router.route('/:requester_id/task/:task_id/units')
+//     .get(function(req, res) {
+//
+//         var task = Task.find({
+//             requester_id: req.params.requester_id,
+//             function(err, task) {
+//                 if (err) {
+//                     res.send(err)
+//                 } else {
+//
+//                 }
+//             }
+//         })
+//
+//         Unit.find({
+//             task_id: task._id
+//         }, function(err, units) {
+//             if (err)
+//                 res.send(err)
+//             res.json({
+//                 'task': task,
+//                 'units': units
+//             });
+//         });
+//     });
 
 module.exports = router
