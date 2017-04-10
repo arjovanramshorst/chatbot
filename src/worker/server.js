@@ -271,8 +271,6 @@ bot.on('message', function (msg) {
             console.log("Added user " + chatId + " to the stateTracker.");
         }
 
-        console.log("\nState for " + chatId + " is: " + getState(chatId));
-
         executeState(chatId, msg);
     } else {
         console.log('Shortcut match found');
@@ -536,7 +534,6 @@ const executeState = (chatId, msg) => {
                     setState(chatId, 'task_review_question');
                 } else {
                     setState(chatId, 'task_review_complete');
-                    executeState(chatId, msg)
                 }
             } else {
                 bot.sendMessage(chatId, 'Invalid answer, requires "yes" or "no"')
