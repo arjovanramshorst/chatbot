@@ -52,7 +52,7 @@ conn.once('open', function () {
     console.log('Connected successfully to MongoDB');
 });
 
-const REVIEW_CHANCE = 1
+const REVIEW_CHANCE = 0.5
 
 /* ======================= */
 
@@ -173,7 +173,6 @@ const saveAnswers = (answers, chatId, unit) => {
     return new Promise((resolve, reject) => {
         unit.solutions.push({
             responses: answers,
-            reviewed: 'PENDING',
             user_id: chatId,
         });
         unit.save(function(err) {
@@ -204,31 +203,35 @@ const fetchUnitsForTask = (task) => {
 }
 
 const saveReview = (answers, chat_id, unit) => {
+    console.log('trying saving answers?')
     if(answers.length > 0 && !answers.includes('no')) {
-        storeReview(unit, chat_id, 'confirmed')
+        return storeReview(unit, chat_id, 'confirmed')
     } else if(answers.length > 0 && answers.includes('no')) {
-        storeReview(unit, chat_id, 'rejected')
+        return storeReview(unit, chat_id, 'rejected')
     } else {
         console.log('One or more incorrect answers given')
         console.log(answers)
+        return Promise.reject('Incorrect answers given')
     }
 }
 
 const storeReview = (unit, chat_id, review) => {
-    unit.solutions.map(solution => {
+    unit.solutions.forEach(solution => {
         if(solution.user_id === chat_id) {
             console.log('solution is successfully reviewed');
-            solution.review = review;
+            solution.reviewed = review;
         }
-        return solution;
     })
-    unit.save((err) => {
-        if(err) {
-            console.log(err)
-        } else {
-            console.log('Review stored successfully')
-        }
-    });
+    return new Promise((resolve, reject) => {
+        unit.save((err) => {
+            if(err) {
+                reject(err)
+            } else {
+                console.log('Review stored successfully')
+                resolve()
+            }
+        });
+    })
 }
 
 const getReviewUnit = (units) => {
@@ -246,7 +249,7 @@ const getReviewUnit = (units) => {
         // Return the first unit with the user_id of a solution in an object.
         return {
             unit: reviewSolutions[0].unit,
-            user_id: reviewSolutions[0].solutions[0].chat_id
+            user_id: reviewSolutions[0].solutions[0].user_id
         };
     }
 
@@ -278,6 +281,7 @@ bot.on('message', function (msg) {
 
 
 const executeState = (chatId, msg) => {
+    console.log("\nState for " + chatId + " is: " + getState(chatId));
     const task = getTask(chatId)
     const question = task ? task.questions[getQuestionCounter(chatId)] : null;
     const unit = getUnit(chatId)
@@ -332,83 +336,94 @@ const executeState = (chatId, msg) => {
                 bot.sendMessage(chatId, task.description);
             }
 
-            setState(chatId, 'task_init');
+            setState(chatId, 'init');
             executeState(chatId, msg);
             break;
-        case 'task_init': // sending data from unit
-            if(Math.random() < REVIEW_CHANCE) { // Do review task
-                fetchUnitsForTask(task).then(units => {
-                    const reviewUnit = getReviewUnit(units)
-                    if(reviewUnit !== null) {
-                        switch (task.content_definition.content_type) {
-                            case 'IMAGE_LIST':
-                                Object.keys(reviewUnit.unit.content).forEach(function (key) {
-                                    bot.sendPhoto(chatId, reviewUnit.unit.content[key], {});
-                                });
-                                break;
-                            case 'TEXT_LIST':
-                                Object.keys(reviewUnit.unit.content).forEach(function (key) {
-                                    bot.sendMessage(chatId, reviewUnit.unit.content[key], {});
-                                });
-                                break;
-                        }
-                        initQuestionCounter(chatId);
-                        setUnit(chatId, reviewUnit.unit)
-                        setReviewUserId(chatId, reviewUnit.user_id)
-                        setState(chatId, 'task_review_question')
-                    }
-                    else {
-                        // Do something else when no review task is available?
-                    }
-                })
+        case 'init':
+            if(Math.random() < REVIEW_CHANCE) {
+                setState(chatId, 'review_init')
             } else {
-                Unit.findOne({task_id: task._id, 'solutions': {$not: {$elemMatch: {user_id: chatId}}}}, function (err, unit) {
-                if(unit === null) {
-                    bot.sendMessage(chatId, "Enough other people are already working on this task at the moment. Please select another.");
-                    setState(chatId, 'start');
-                    executeState(chatId, msg);
+                setState(chatId, 'task_init')
+            }
+            executeState(chatId, msg)
+            break;
+        case 'review_init': // sending data from unit
+            fetchUnitsForTask(task).then(units => {
+                const reviewUnit = getReviewUnit(units)
+                if(reviewUnit !== null) {
+                    switch (task.content_definition.content_type) {
+                        case 'IMAGE_LIST':
+                            Object.keys(reviewUnit.unit.content).forEach(function (key) {
+                                bot.sendPhoto(chatId, reviewUnit.unit.content[key], {});
+                            });
+                            break;
+                        case 'TEXT_LIST':
+                            Object.keys(reviewUnit.unit.content).forEach(function (key) {
+                                bot.sendMessage(chatId, reviewUnit.unit.content[key], {});
+                            });
+                            break;
+                    }
+                    initQuestionCounter(chatId);
+                    setUnit(chatId, reviewUnit.unit)
+                    setReviewUserId(chatId, reviewUnit.user_id)
+                    setState(chatId, 'task_review_question')
+                    executeState(chatId, msg)
                 }
                 else {
-                    initQuestionCounter(chatId);
-                    setUnit(chatId, unit);
+                    // Do a normal task if no review task is available.
+                    setState(chatId, 'task_init')
+                    executeState(chatId, msg)
+                }
+            }).catch(err => console.log(err))
 
-                        //find all unit fields that are declared in the task
-                        const taskFields = task.content_definition.content_fields;
-                        let fields = [];
-                        Object.keys(taskFields).forEach(function (key) {
-                            if (taskFields.hasOwnProperty(key)) {
-                                var value = taskFields[key];
-                                fields.push(value.substr(value.lastIndexOf(".") + 1));
-                            }
-                        });
-
-                        // process all unit content
-                        switch (task.content_definition.content_type) {
-                            case 'IMAGE_LIST':
-                                //send all declared unit contents
-                                Object.keys(unit.content).forEach(function (key) {
-                                    if(fields.indexOf(key) !== -1) {
-                                        bot.sendPhoto(chatId, unit.content[key], {});
-                                    }
-                                });
-                                break;
-                            case 'TEXT_LIST':
-                                //send all declared unit contents
-                                Object.keys(unit.content).forEach(function (key) {
-                                    if(fields.indexOf(key) !== -1) {
-                                        bot.sendMessage(chatId, unit.content[key], {});
-                                    }
-                                });
-                                break;
-                            default:
-                                bot.sendMessage(chatId, "Please perform the following task");
-                        }
-
-                        setState(chatId, 'task_ask_question');
-                        executeState(chatId, msg);
-                    }
-				})
+            break;
+        case 'task_init':
+            Unit.findOne({task_id: task._id, 'solutions': {$not: {$elemMatch: {user_id: chatId}}}}, function (err, unit) {
+            if(unit === null) {
+                bot.sendMessage(chatId, "Enough other people are already working on this task at the moment. Please select another.");
+                setState(chatId, 'start');
+                executeState(chatId, msg);
             }
+            else {
+                initQuestionCounter(chatId);
+                setUnit(chatId, unit);
+
+                    //find all unit fields that are declared in the task
+                    const taskFields = task.content_definition.content_fields;
+                    let fields = [];
+                    Object.keys(taskFields).forEach(function (key) {
+                        if (taskFields.hasOwnProperty(key)) {
+                            var value = taskFields[key];
+                            fields.push(value.substr(value.lastIndexOf(".") + 1));
+                        }
+                    });
+
+                    // process all unit content
+                    switch (task.content_definition.content_type) {
+                        case 'IMAGE_LIST':
+                            //send all declared unit contents
+                            Object.keys(unit.content).forEach(function (key) {
+                                if(fields.indexOf(key) !== -1) {
+                                    bot.sendPhoto(chatId, unit.content[key], {});
+                                }
+                            });
+                            break;
+                        case 'TEXT_LIST':
+                            //send all declared unit contents
+                            Object.keys(unit.content).forEach(function (key) {
+                                if(fields.indexOf(key) !== -1) {
+                                    bot.sendMessage(chatId, unit.content[key], {});
+                                }
+                            });
+                            break;
+                        default:
+                            bot.sendMessage(chatId, "Please perform the following task");
+                    }
+
+                    setState(chatId, 'task_ask_question');
+                    executeState(chatId, msg);
+                }
+            })
             break;
         case 'task_ask_question': // asking a question
             // ask the question
@@ -496,6 +511,52 @@ const executeState = (chatId, msg) => {
 
             executeState(chatId, msg);
             break;
+        case 'task_review_question':
+            // Show question
+            // Show answer
+            let solutionUserId = getReviewUserId(chatId)
+            const response = getResponseForQuestion(unit, solutionUserId, getQuestionCounter(chatId))
+            const reviewString = 'Regarding the above message, is the following answer correct?\nQ: '+ question.question + '\nA: ' + response
+
+            bot.sendMessage(chatId, reviewString, {
+                reply_markup: JSON.stringify({
+                    one_time_keyboard: true,
+                    keyboard: [['yes'],['no']],
+                    resize_keyboard: true
+                })
+            })
+            setState(chatId, 'task_review_awaiting')
+            break
+        case 'task_review_awaiting':
+            // Receive answer (yes or no)
+            if(msg.text && (msg.text === 'yes' || msg.text === 'no')) {
+                pushAnswer(chatId, msg.text);
+                if(getQuestionCounter(chatId) < task.questions.length - 1) {
+                    incrementQuestionCounter(chatId);
+                    setState(chatId, 'task_review_question');
+                } else {
+                    setState(chatId, 'task_review_complete');
+                    executeState(chatId, msg)
+                }
+            } else {
+                bot.sendMessage(chatId, 'Invalid answer, requires "yes" or "no"')
+                setState(chatId, 'task_review_question')
+            }
+            executeState(chatId, msg)
+            break;
+        case 'task_review_complete':
+            saveReview(getAnswers(chatId), getReviewUserId(chatId), getUnit(chatId)).then(() => {
+                bot.sendMessage(chatId, "The review is complete!");
+
+                clearTemporaryData(chatId)
+                setState(chatId, 'task_info');
+                executeState(chatId, msg);
+            }).catch(err => {
+                bot.sendMessage(chatId, 'Something went wrong..')
+                setState(chatId, 'task_info');
+                executeState(chatId, msg);
+            });
+            break;
         case 'task_complete': // clean up when task is complete
             //save the solution to the task
             saveAnswers(getAnswers(chatId), chatId, getUnit(chatId)).then((unit) => {
@@ -503,6 +564,7 @@ const executeState = (chatId, msg) => {
 
                 //clear saved data
                 clearTemporaryData(chatId);
+
 
                 //serve a new unit of same task
                 setState(chatId, 'task_info');
