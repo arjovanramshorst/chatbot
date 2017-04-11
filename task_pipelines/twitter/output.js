@@ -22,7 +22,7 @@ var fs = require('fs');
 const outputCSV = (taskUnitsUrl) => {
     request(taskUnitsUrl, function(error, response, body) {
         if (!error) {
-            const fields = ['tweet_id', 'tweet_text', 'yes', 'no', 'dont_know'];
+            const fields = ['tweet_id', 'tweet_text', 'yes', 'no', 'dont_know', 'review_accepts', 'review_rejects', 'should_be_added', 'agreed'];
             const units = JSON.parse(body);
             const data = [];
 
@@ -32,6 +32,10 @@ const outputCSV = (taskUnitsUrl) => {
                 var neutrals = 0;
                 var negatives = 0;
 
+                var reviewAccepts = 0;
+                var reviewRejects = 0;
+                var reviewPending = 0;
+
                 for (var j = 0; j < solutions.length; j++) {
                     if (solutions[j].responses[0].toLowerCase() == 'yes') {
                         positives = positives + 1;
@@ -40,14 +44,29 @@ const outputCSV = (taskUnitsUrl) => {
                     } else if (solutions[j].responses[0].toLowerCase() == 'i dont know') {
                         neutrals = neutrals + 1
                     }
+
+                    if (solutions[j].reviewed == 'rejected') {
+                        reviewRejects = reviewRejects + 1;
+                    } else if (solutions[j].reviewed == 'confirmed') {
+                        reviewAccepts = reviewAccepts + 1;
+                    } else if (solutions[j].reviewed == 'pending') {
+                        reviewPending = reviewPending + 1
+                    }
                 }
+
+                const shouldBeAdded = (positives * (reviewAccepts + reviewPending)) > 0
+                const agreed = positives !== negatives !== neutrals
 
                 data.push({
                   'tweet_id': units[i].content.tweet_id,
                   'tweet_text': units[i].content.tweet_text,
                   'yes': positives,
                   'no': negatives,
-                  'dont_know': neutrals
+                  'dont_know': neutrals,
+                  'review_accepts': reviewAccepts,
+                  'review_rejects': reviewRejects,
+                  'should_be_added': shouldBeAdded,
+                  'agreed': agreed
                 });
             }
 
