@@ -1,5 +1,8 @@
 # Bucky, the Chatbot of Microwork.
 
+## Installation
+Go to the `/src` directory and run `npm install`.
+
 ## Deployment
 To deploy the crowdsourcing platform, go to the root directory and execute the following steps.
 

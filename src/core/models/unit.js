@@ -11,7 +11,10 @@ var UnitSchema = new Schema({
     solutions: [{
         user_id: String,
         responses: [],
-        reviewed: String
+        reviewed: {
+            type: String,
+            default: 'pending',
+        }
     }]
 });
 
