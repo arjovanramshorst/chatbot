@@ -234,15 +234,15 @@ const storeReview = (unit, chat_id, review) => {
     })
 }
 
-const getReviewUnit = (units) => {
+const getReviewUnit = (units, chatId) => {
     const reviewSolutions = units.filter(unit => {
         // Filter units that require at least one solution to be reviewed.
-        return unit.solutions.findIndex(solution => solution.reviewed === 'pending') !== -1;
+        return unit.solutions.findIndex(solution => solution.reviewed === 'pending' && solution.user_id !== chatId) !== -1;
     }).map(unit => {
         // map units with the list of solutions that need to be reviewed.
         return {
             unit: unit,
-            solutions: unit.solutions.filter(solution => solution.reviewed === 'pending')
+            solutions: unit.solutions.filter(solution => (solution.reviewed === 'pending' && solution.user_id !== chatId))
         }
     });
     if (reviewSolutions.length > 0) {
