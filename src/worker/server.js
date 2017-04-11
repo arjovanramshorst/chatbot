@@ -349,44 +349,7 @@ const executeState = (chatId, msg) => {
             fetchUnitsForTask(task).then(units => {
                 const reviewUnit = getReviewUnit(units)
                 if(reviewUnit !== null) {
-                    switch (task.content_definition.content_type) {
-                        case 'IMAGE_LIST':
-                            Object.keys(reviewUnit.unit.content).forEach(function (key) {
-                                bot.sendPhoto(chatId, reviewUnit.unit.content[key], {});
-                            });
-                            break;
-                        case 'TEXT_LIST':
-                            Object.keys(reviewUnit.unit.content).forEach(function (key) {
-                                bot.sendMessage(chatId, reviewUnit.unit.content[key], {});
-                            });
-                            break;
-                    }
-                    initQuestionCounter(chatId);
-                    setUnit(chatId, reviewUnit.unit)
-                    setReviewUserId(chatId, reviewUnit.user_id)
-                    setState(chatId, 'task_review_question')
-                    executeState(chatId, msg)
-                }
-                else {
-                    // Do a normal task if no review task is available.
-                    setState(chatId, 'task_init')
-                    executeState(chatId, msg)
-                }
-            }).catch(err => console.log(err))
-
-            break;
-        case 'task_init':
-            Unit.findOne({task_id: task._id, 'solutions': {$not: {$elemMatch: {user_id: chatId}}}}, function (err, unit) {
-            if(unit === null) {
-                bot.sendMessage(chatId, "Enough other people are already working on this task at the moment. Please select another.");
-                setState(chatId, 'start');
-                executeState(chatId, msg);
-            }
-            else {
-                initQuestionCounter(chatId);
-                setUnit(chatId, unit);
-
-                    //find all unit fields that are declared in the task
+                    // Doesn't really follow DRY principle.
                     const taskFields = task.content_definition.content_fields;
                     let fields = [];
                     Object.keys(taskFields).forEach(function (key) {
@@ -417,9 +380,65 @@ const executeState = (chatId, msg) => {
                         default:
                             bot.sendMessage(chatId, "Please perform the following task");
                     }
+                    initQuestionCounter(chatId);
+                    setUnit(chatId, reviewUnit.unit)
+                    setReviewUserId(chatId, reviewUnit.user_id)
+                    setState(chatId, 'task_review_question')
+                    executeState(chatId, msg)
+                }
+                else {
+                    // Do a normal task if no review task is available.
+                    setState(chatId, 'task_init')
+                    executeState(chatId, msg)
+                }
+            }).catch(err => console.log(err))
 
-                    setState(chatId, 'task_ask_question');
-                    executeState(chatId, msg);
+            break;
+        case 'task_init':
+            Unit.findOne({task_id: task._id, 'solutions': {$not: {$elemMatch: {user_id: chatId}}}}, function (err, unit) {
+            if(unit === null) {
+                bot.sendMessage(chatId, "Enough other people are already working on this task at the moment. Please select another.");
+                setState(chatId, 'start');
+                executeState(chatId, msg);
+            }
+            else {
+                initQuestionCounter(chatId);
+                setUnit(chatId, unit);
+
+                //find all unit fields that are declared in the task
+                const taskFields = task.content_definition.content_fields;
+                let fields = [];
+                Object.keys(taskFields).forEach(function (key) {
+                    if (taskFields.hasOwnProperty(key)) {
+                        var value = taskFields[key];
+                        fields.push(value.substr(value.lastIndexOf(".") + 1));
+                    }
+                });
+
+                // process all unit content
+                switch (task.content_definition.content_type) {
+                    case 'IMAGE_LIST':
+                        //send all declared unit contents
+                        Object.keys(unit.content).forEach(function (key) {
+                            if(fields.indexOf(key) !== -1) {
+                                bot.sendPhoto(chatId, unit.content[key], {});
+                            }
+                        });
+                        break;
+                    case 'TEXT_LIST':
+                        //send all declared unit contents
+                        Object.keys(unit.content).forEach(function (key) {
+                            if(fields.indexOf(key) !== -1) {
+                                bot.sendMessage(chatId, unit.content[key], {});
+                            }
+                        });
+                        break;
+                    default:
+                        bot.sendMessage(chatId, "Please perform the following task");
+                }
+
+                setState(chatId, 'task_ask_question');
+                executeState(chatId, msg);
                 }
             })
             break;
