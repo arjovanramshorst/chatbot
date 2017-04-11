@@ -10,7 +10,7 @@ var TaskSchema = new Schema({
     name: String,
     requester_id: String,
     description: String,
-    solution_limit: Number, // A requester pays for a limited amount of responses
+    solution_limit: { type: Number, default: 5 }, // A requester pays for a limited amount of responses
     content_definition: {
         content_type: String, // IMAGE / TWEET
         content_fields: Object // e.g. unit.content.image_url
