@@ -3,6 +3,8 @@
   "version": "1.0.0",
   "dependencies": {
     "dropbox": "^2.5.2",
+    "fs": "0.0.1-security",
+    "json2csv": "^3.7.3",
     "request": "^2.81.0"
   }
 }
