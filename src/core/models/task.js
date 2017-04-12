@@ -19,11 +19,12 @@ const TaskSchema = new Schema({
         type: String,
         required: true,
     },
-    solution_limit: { type: Number, default: 5 }, // A requester pays for a limited amount of responses
+    solution_limit: { type: Number, min: 0, default: 5 }, // A requester pays for a limited amount of responses
     content_definition: {
         content_type: {
             type: String,
             required: true,
+            enum: ['IMAGE', 'TWEET'],
         }, // IMAGE / TWEET
         content_fields: {
             type: Object,
@@ -36,8 +37,14 @@ const TaskSchema = new Schema({
             required: true,
         },
         response_definition: {
-            type: Object,
-            required: true,
+            response_type: {
+                type: String,
+                required: true,
+                enum: ['NUMBER', 'FREE_TEXT', 'SELECT', 'IMAGE'],
+            },
+            response_select_options: {
+                type: Array,
+            }
         }
     }],
     requires_review: { type: Boolean, default: true }
