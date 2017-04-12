@@ -59,7 +59,7 @@ const addLocalFilesTask = (res) => {
     task.name = 'Delft image archive categorization';
     task.requester_id = 'hardcodedRequesterIdTwo';
     task.description = 'The Municipality of Delft has a collection of newly digitized photos, which need to be categorized before adding them to the Delft Image Archive. '
-                        + 'There are three possible catgories: History, Topology and Portraits.\n\n'
+                        + 'There are three possible catgories: History, Landscape and Portraits.\n\n'
                         + 'You are needed to judge how much an image could fit in each category.';
     task.content_definition.content_type = 'IMAGE_LIST';
     task.content_definition.content_fields = {
