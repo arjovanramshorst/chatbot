@@ -14,6 +14,7 @@ request(requesterTasksUrl, function(error, response, body) {
         const taskId = jsonBody[0]._id;
         const taskUnitsUrl = 'http://localhost:3333/api/tasks/' + taskId + '/units';
         insertNewUnits(taskUnitsUrl);
+        console.log('Dropbox input pipeline successful!')
     }
 });
 
@@ -22,7 +23,8 @@ request(requesterTasksUrl, function(error, response, body) {
 */
 
 const insertUnit = (imageUrl, taskUnitsUrl) => {
-    console.log('inserting new image...')
+    console.log('Dropbox photo has been added. Image url: ' + imageUrl);
+    
     const unit = {
         content: {
             image_url: imageUrl
@@ -35,7 +37,7 @@ const insertUnit = (imageUrl, taskUnitsUrl) => {
         if (err) {
             return console.error('Failed to add image:', err);
         }
-        console.log('Success! Server response: ', body);
+        //console.log('Success! Server response: ', body);
     });
 };
 

@@ -94,7 +94,7 @@ const outputCSV = (taskUnitsUrl) => {
             fs.writeFile('file.csv', csv, function(err) {
                 if (err)
                     throw err;
-                console.log('File saved with output pipeline!');
+                console.log('Dropbox output pipeline successful!');
             });
 
         } else {
