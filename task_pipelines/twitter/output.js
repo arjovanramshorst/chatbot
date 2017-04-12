@@ -22,7 +22,7 @@ var fs = require('fs');
 const outputCSV = (taskUnitsUrl) => {
     request(taskUnitsUrl, function(error, response, body) {
         if (!error) {
-            const fields = ['tweet_id', 'tweet_text', 'yes', 'no', 'dont_know', 'review_accepts', 'review_rejects', 'should_be_added', 'agreed'];
+            const fields = ['tweet_id', 'tweet_text', 'yes', 'no', 'dont_know', 'review_accepts', 'review_rejects', 'agreed', 'should_be_added'];
             const units = JSON.parse(body);
             const data = [];
 
@@ -54,8 +54,8 @@ const outputCSV = (taskUnitsUrl) => {
                     }
                 }
 
-                const shouldBeAdded = (positives * (reviewAccepts + reviewPending)) > 0
-                const agreed = positives !== negatives !== neutrals
+                const agreed = (positives >= 2 * negatives) || (negatives >= 2 * positives)
+                const shouldBeAdded = (positives > negatives) && agreed && (positives * (reviewAccepts + reviewPending)) > 0
 
                 data.push({
                   'tweet_id': units[i].content.tweet_id,
@@ -65,8 +65,8 @@ const outputCSV = (taskUnitsUrl) => {
                   'dont_know': neutrals,
                   'review_accepts': reviewAccepts,
                   'review_rejects': reviewRejects,
-                  'should_be_added': shouldBeAdded,
-                  'agreed': agreed
+                  'agreed': agreed,
+                  'should_be_added': shouldBeAdded
                 });
             }
 
