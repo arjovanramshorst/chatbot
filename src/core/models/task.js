@@ -7,17 +7,38 @@ var Schema = mongoose.Schema;
  * These task units will be added later, either through API or external datasources.
  */
 const TaskSchema = new Schema({
-    name: String,
-    requester_id: String,
-    description: String,
+    name: {
+        type: String,
+        required: true,
+    },
+    requester_id: {
+        type: String,
+        required: true,
+    },
+    description: {
+        type: String,
+        required: true,
+    },
     solution_limit: { type: Number, default: 5 }, // A requester pays for a limited amount of responses
     content_definition: {
-        content_type: String, // IMAGE / TWEET
-        content_fields: Object // e.g. unit.content.image_url
+        content_type: {
+            type: String,
+            required: true,
+        }, // IMAGE / TWEET
+        content_fields: {
+            type: Object,
+            required: true,
+        } // e.g. unit.content.image_url
     },
     questions: [{
-        question: String,
-        response_definition: Object
+        question: {
+            type: String,
+            required: true,
+        },
+        response_definition: {
+            type: Object,
+            required: true,
+        }
     }],
     requires_review: { type: Boolean, default: true }
 });
