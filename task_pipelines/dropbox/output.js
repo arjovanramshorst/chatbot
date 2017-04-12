@@ -90,11 +90,12 @@ const outputCSV = (taskUnitsUrl) => {
             }
 
             const csv = json2csv({data: data, fields: fields});
+            const filename = 'file' + (new Date).getTime() + '.csv';
 
-            fs.writeFile('file.csv', csv, function(err) {
+            fs.writeFile(filename, csv, function(err) {
                 if (err)
                     throw err;
-                console.log('Dropbox output pipeline successful!');
+                console.log('Dropbox output pipeline successful! Filename: ' + filename);
             });
 
         } else {
