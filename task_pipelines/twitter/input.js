@@ -131,13 +131,18 @@ const insertTweets = (taskUrl, taskUnitsUrl) => {
                         if (err) {
                             return console.error('Failed to add tweet:', err);
                         }
-                        console.log('Success! Server response: ', body);
+                        //console.log('Success! Server response: ', body);
                     });
                 }
 
-                console.log({'message': 'Successful insert!', 'new units length': newUnits.length});
+                if(newUnits.length < 1) {
+                  console.log('Twitter input pipeline successful! No new tweets were found.')
+                } else {
+                  console.log('Twitter input pipeline successful! Amount of new tweets: ' + newUnits.length);
+                }
+
             } else {
-                console.error(error)
+                console.error(error);
             }
         });
     });

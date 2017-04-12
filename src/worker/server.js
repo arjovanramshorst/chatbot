@@ -27,7 +27,7 @@ app.use(bodyParser.json());
 const port = /*process.env.PORT || */ 3000;
 
 /* ========== TELEGRAM SETUP ============= */
-// replace the value below with the Telegram token you receive from @BotFather 
+// replace the value below with the Telegram token you receive from @BotFather
 //const token = '295147674:AAERxZjce89nISZpVfBMbyJDK6FIHE8u1Zw'; //Lizzy, username: @buck_a_bot
 // const token = '334665274:AAHal-GI-g_Os4OiSOQ04D7h1pUY_98Slgo'; //Bjorn, username: @@BuckABot
 // const token = '373349364:AAGPbNZb8tdCBabVGCQMm_vG_UBjAh7_rkY'; //Arjo, username: @bucky_two_bot
