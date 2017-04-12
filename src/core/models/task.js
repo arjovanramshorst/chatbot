@@ -6,7 +6,7 @@ var Schema = mongoose.Schema;
  * When defining a task, the user does not yet have to specify content in the form of task units.
  * These task units will be added later, either through API or external datasources.
  */
-var TaskSchema = new Schema({
+const TaskSchema = new Schema({
     name: String,
     requester_id: String,
     description: String,

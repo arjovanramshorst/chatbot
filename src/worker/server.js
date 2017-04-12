@@ -647,6 +647,10 @@ bot.onText(/\/help/, function (msg) {
     executeState(chatId, msg);
 });
 
+bot.onText(/\/info/, function (msg) {
+    bot.sendMessage(msg.chat.id, getTask(msg.chat.id).description);
+});
+
 // Matches /quit
 bot.onText(/\/quit/, function (msg) {
     var chatId = msg.chat.id;
