@@ -67,7 +67,7 @@ const addLocalFilesTask = (res) => {
         }
     },
     {
-        question: 'How well do you think this image belongs to category TOPOLOGY?',
+        question: 'How well do you think this image belongs to category LANDSCAPE?',
         response_definition: {
             'response_type': 'SELECT',
             'response_select_options': [

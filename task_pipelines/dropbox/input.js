@@ -39,18 +39,24 @@ const insertUnit = (imageUrl, taskUnitsUrl) => {
     });
 };
 
+const transformToDownloadableUrl = (url) => {
+  return url.substr(0, url.length - 1) + '1' // replace last the 0 by a 1.
+}
+
 const insertNewUnits = (taskUnitsUrl) => {
     dbx.filesListFolder({path: ''}).then(function(response) {
 
         response.entries.forEach(file => {
-
             dbx.sharingCreateSharedLinkWithSettings({path: file.path_lower}).then(function(response) {
-                const imageUrl = response.url.substr(0, response.url.length - 1) + '1' // To make sure it becomes visible in Telegram. Not so clean.
+                const imageUrl = transformToDownloadableUrl(response.url)
                 insertUnit(imageUrl, taskUnitsUrl);
             }).catch(function(error) {
-                if (error.status === 409) {
-                    console.log('Dropbox file link exists. Probably already seeded then...')
-                }
+                // Link already exists so we can add it directly.
+                // TODO: Check if image url not already in a task unit!! This is just for testing.
+                dbx.sharingListSharedLinks({path: file.path_lower}).then(function(response) {
+                    const imageUrl = transformToDownloadableUrl(response.links[0].url);
+                    insertUnit(imageUrl, taskUnitsUrl)
+                });
             });
         });
     }).catch(function(error) {
