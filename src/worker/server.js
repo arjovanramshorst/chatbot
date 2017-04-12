@@ -361,17 +361,17 @@ const executeState = (chatId, msg) => {
                     switch (task.content_definition.content_type) {
                         case 'IMAGE_LIST':
                             //send all declared unit contents
-                            Object.keys(unit.content).forEach(function (key) {
+                            Object.keys(reviewUnit.unit.content).forEach(function (key) {
                                 if(fields.indexOf(key) !== -1) {
-                                    bot.sendPhoto(chatId, unit.content[key], {});
+                                    bot.sendPhoto(chatId, reviewUnit.unit.content[key], {});
                                 }
                             });
                             break;
                         case 'TEXT_LIST':
                             //send all declared unit contents
-                            Object.keys(unit.content).forEach(function (key) {
+                            Object.keys(reviewUnit.unit.content).forEach(function (key) {
                                 if(fields.indexOf(key) !== -1) {
-                                    bot.sendMessage(chatId, '<b>' + unit.content[key] + '</b>', {parse_mode: 'HTML'});
+                                    bot.sendMessage(chatId, '<b>' + reviewUnit.unit.content[key] + '</b>', {parse_mode: 'HTML'});
                                 }
                             });
                             break;
@@ -449,12 +449,13 @@ const executeState = (chatId, msg) => {
                         answers.push([option]);
                     });
 
-                    bot.sendMessage(chatId, question.question, {
+                    bot.sendMessage(chatId, '<i>' +question.question + '</i>', {
                         reply_markup: JSON.stringify({
                             one_time_keyboard: true,
                             keyboard: answers,
                             resize_keyboard: true
-                        })
+                        }),
+                        parse_mode: 'HTML',
                     });
                     break;
                 case 'FREE_TEXT':
@@ -531,15 +532,21 @@ const executeState = (chatId, msg) => {
             // Show answer
             let solutionUserId = getReviewUserId(chatId)
             const response = getResponseForQuestion(unit, solutionUserId, getQuestionCounter(chatId))
-            const reviewString = 'Regarding the above message, is the following answer correct?\nQ: '+ question.question + '\nA: ' + response
-
+            let reviewString = '<i>Regarding the above message, is the following answer correct?</i>\nQ: '+ question.question + '\nA: '
+            if(question.response_definition.response_type !== 'IMAGE') {
+                reviewString += response;
+            }
             bot.sendMessage(chatId, reviewString, {
                 reply_markup: JSON.stringify({
                     one_time_keyboard: true,
                     keyboard: [['yes'],['no']],
                     resize_keyboard: true
-                })
+                }),
+                parse_mode: 'HTML',
             })
+            if(question.response_definition.response_type === 'IMAGE') {
+                bot.sendPhoto(chatId, response[response.length -1].file_id)
+            }
             setState(chatId, 'task_review_awaiting')
             break
         case 'task_review_awaiting':
