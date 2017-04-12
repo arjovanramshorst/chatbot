@@ -25,7 +25,13 @@ const addSentimentTask = (res) => {
     var task = new Task();
     task.name = 'Delft tweet relevance judgement';
     task.requester_id = 'hardcodedRequesterIdOne';
-    task.description = 'Would these tweets be interesting for the official Delft Twitter account to retweet?';
+    task.description = 'The Municipality of Delft would like to showcase tweets with #Delft on its website. However, not all ' 
+                        + 'tweets are appropriate. Therefore you are needed to judge them.\n' 
+                        + 'Examples of appropriate tweets are: \n\n'
+                        + '<b>- Micro-appartementen, voor starter die geen huis kan vinden http://www.hetnieuws.in/nieuws/4307018/amsterdam/asten/delft/den-haag/nederland/opende/rotterdam/utrecht … #delft</b>\n\n'
+                        + '<b>- Oude station van #Delft krijgt #herbestemming en moet weer de spil worden in de stad. https://www.linkedin.com/groups/1863584/1863584-6253841007671156737 </b>\n\n'
+                        + 'Now it is your turn. Would these tweets be interesting for the official Delft Twitter account to retweet?';
+
     task.content_definition.content_type = 'TEXT_LIST';
     task.content_definition.content_fields = {
         'text': 'content.tweet_text',
@@ -52,7 +58,9 @@ const addLocalFilesTask = (res) => {
     var task = new Task();
     task.name = 'Delft image archive categorization';
     task.requester_id = 'hardcodedRequesterIdTwo';
-    task.description = 'Newly digitized photos need to be categorized to be added to the Delft Image Archive.';
+    task.description = 'The Municipality of Delft has a collection of newly digitized photos, which need to be categorized before adding them to the Delft Image Archive. '
+                        + 'There are three possible catgories: History, Topology and Portraits.\n\n'
+                        + 'You are needed to judge how much an image could fit in each category.';
     task.content_definition.content_type = 'IMAGE_LIST';
     task.content_definition.content_fields = {
         'image_1': 'content.image_url',
@@ -98,7 +106,8 @@ const addContentCreationTask = (res) => {
     var task = new Task();
     task.name = 'Content creation task';
     task.requester_id = 'hardcodedRequesterIdThree';
-    task.description = 'The municipality wants to get insight in when particular Point of Interests are busy.';
+    task.description = 'The Municipality of Delft wants to get insight in when particular Point of Interests are busy.\n\n'
+                        + 'You will need to upload an image at the place and time included in the task description.';
     task.content_definition.content_type = 'TEXT_LIST';
     task.content_definition.content_fields = {
         'text': 'content.content_description',

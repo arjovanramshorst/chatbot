@@ -287,13 +287,11 @@ const executeState = (chatId, msg) => {
     switch (getState(chatId)) {
         case 'new':
             bot.sendMessage(chatId, "Hi there! I am Bucky and we could work together to finish some much needed work.");
-            setState(chatId, 'start');
-            executeState(chatId, msg);
-            break;
-        case 'help':
-            bot.sendMessage(chatId, "Bucky makes it possible to do microwork, whether you are on the go or when you have more time. "
-                + "A list of possible types of tasks is presented. If you select one of the types of tasks, then you can complete "
-                + "them in return for a monetary compensation. When you are done, you can simply type '/quit' to end the conversation.");
+            bot.sendMessage(chatId, 'You can always use these commands as shortcuts: \n' +
+                                    '/reset : to reboot \n' +
+                                    '/choosetask : to choose a (different) task \n' +
+                                    '/help : to get more information \n' +
+                                    '/quit : to stop while doing a task, or to end the conversation');
             setState(chatId, 'start');
             executeState(chatId, msg);
             break;
@@ -331,7 +329,7 @@ const executeState = (chatId, msg) => {
 
             //if a description exists, send it
             if (task && task.description) {
-                bot.sendMessage(chatId, task.description);
+                bot.sendMessage(chatId, task.description, {parse_mode: 'HTML'});
             }
 
             setState(chatId, 'init');
@@ -339,9 +337,9 @@ const executeState = (chatId, msg) => {
             break;
         case 'init':
             if(Math.random() < REVIEW_CHANCE) {
-                setState(chatId, 'review_init')
+                setState(chatId, 'review_init');
             } else {
-                setState(chatId, 'task_init')
+                setState(chatId, 'task_init');
             }
             executeState(chatId, msg)
             break;
@@ -643,8 +641,7 @@ bot.onText(/\/reset/, function (msg) {
 // Matches /help
 bot.onText(/\/help/, function (msg) {
     var chatId = msg.chat.id;
-    setState(chatId, 'help');
-    executeState(chatId, msg);
+    if(getState(chatId) === )
 });
 
 // Matches /quit
