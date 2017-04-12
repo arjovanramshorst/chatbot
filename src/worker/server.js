@@ -190,9 +190,9 @@ const saveAnswers = (answers, chatId, unit) => {
 
 const fetchTaskByName = (name) => fetchTask({name: name});
 
-const fetchUnitsForTask = (task) => {
+const fetchUnitsForTask = (task, user_id) => {
     return new Promise((resolve, reject) => {
-        Unit.find({task_id: task._id}, (err, units) => {
+        Unit.find({task_id: task._id, solutions: {$not: {$elemMatch: {user_id: user_id}}}}, (err, units) => {
             if(err) {
                 reject(err)
             } else {
@@ -346,7 +346,7 @@ const executeState = (chatId, msg) => {
             executeState(chatId, msg)
             break;
         case 'review_init': // sending data from unit
-            fetchUnitsForTask(task).then(units => {
+            fetchUnitsForTask(task, chatId).then(units => {
                 const reviewUnit = getReviewUnit(units)
                 if(reviewUnit !== null) {
                     // Doesn't really follow DRY principle.
@@ -373,7 +373,7 @@ const executeState = (chatId, msg) => {
                             //send all declared unit contents
                             Object.keys(unit.content).forEach(function (key) {
                                 if(fields.indexOf(key) !== -1) {
-                                    bot.sendMessage(chatId, unit.content[key], {});
+                                    bot.sendMessage(chatId, '<b>' + unit.content[key] + '</b>', {parse_mode: 'HTML'});
                                 }
                             });
                             break;
@@ -429,7 +429,7 @@ const executeState = (chatId, msg) => {
                         //send all declared unit contents
                         Object.keys(unit.content).forEach(function (key) {
                             if(fields.indexOf(key) !== -1) {
-                                bot.sendMessage(chatId, unit.content[key], {});
+                                bot.sendMessage(chatId, '<b>' + unit.content[key] + '</b>', {parse_mode: 'HTML'});
                             }
                         });
                         break;
@@ -565,11 +565,11 @@ const executeState = (chatId, msg) => {
                 bot.sendMessage(chatId, "The review is complete!");
 
                 clearTemporaryData(chatId)
-                setState(chatId, 'task_info');
+                setState(chatId, 'init');
                 executeState(chatId, msg);
             }).catch(err => {
                 bot.sendMessage(chatId, 'Something went wrong..')
-                setState(chatId, 'task_info');
+                setState(chatId, 'init');
                 executeState(chatId, msg);
             });
             break;
@@ -583,7 +583,7 @@ const executeState = (chatId, msg) => {
 
 
                 //serve a new unit of same task
-                setState(chatId, 'task_info');
+                setState(chatId, 'init');
                 executeState(chatId, msg);
             });
             break;
@@ -645,6 +645,10 @@ bot.onText(/\/help/, function (msg) {
     var chatId = msg.chat.id;
     setState(chatId, 'help');
     executeState(chatId, msg);
+});
+
+bot.onText(/\/info/, function (msg) {
+    bot.sendMessage(msg.chat.id, getTask(msg.chat.id).description);
 });
 
 // Matches /quit
