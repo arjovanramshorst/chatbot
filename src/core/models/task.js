@@ -6,18 +6,46 @@ var Schema = mongoose.Schema;
  * When defining a task, the user does not yet have to specify content in the form of task units.
  * These task units will be added later, either through API or external datasources.
  */
-var TaskSchema = new Schema({
-    name: String,
-    requester_id: String,
-    description: String,
-    solution_limit: Number, // A requester pays for a limited amount of responses
+const TaskSchema = new Schema({
+    name: {
+        type: String,
+        required: true,
+    },
+    requester_id: {
+        type: String,
+        required: true,
+    },
+    description: {
+        type: String,
+        required: true,
+    },
+    solution_limit: { type: Number, min: 0, default: 5 }, // A requester pays for a limited amount of responses
     content_definition: {
-        content_type: String, // IMAGE / TWEET
-        content_fields: Object // e.g. unit.content.image_url
+        content_type: {
+            type: String,
+            required: true,
+            enum: ['IMAGE_LIST', 'TEXT_LIST'],
+        },
+        content_fields: {
+            type: Object,
+            required: true,
+        } // e.g. unit.content.image_url
     },
     questions: [{
-        question: String,
-        response_definition: Object
+        question: {
+            type: String,
+            required: true,
+        },
+        response_definition: {
+            response_type: {
+                type: String,
+                required: true,
+                enum: ['NUMBER', 'FREE_TEXT', 'SELECT', 'IMAGE'],
+            },
+            response_select_options: {
+                type: Array,
+            }
+        }
     }],
     requires_review: { type: Boolean, default: true }
 });

@@ -190,9 +190,9 @@ const saveAnswers = (answers, chatId, unit) => {
 
 const fetchTaskByName = (name) => fetchTask({name: name});
 
-const fetchUnitsForTask = (task) => {
+const fetchUnitsForTask = (task, user_id) => {
     return new Promise((resolve, reject) => {
-        Unit.find({task_id: task._id}, (err, units) => {
+        Unit.find({task_id: task._id, solutions: {$not: {$elemMatch: {user_id: user_id}}}}, (err, units) => {
             if(err) {
                 reject(err)
             } else {
@@ -234,15 +234,15 @@ const storeReview = (unit, chat_id, review) => {
     })
 }
 
-const getReviewUnit = (units) => {
+const getReviewUnit = (units, chatId) => {
     const reviewSolutions = units.filter(unit => {
         // Filter units that require at least one solution to be reviewed.
-        return unit.solutions.findIndex(solution => solution.reviewed === 'pending') !== -1;
+        return unit.solutions.findIndex(solution => solution.reviewed === 'pending' && solution.user_id !== chatId) !== -1;
     }).map(unit => {
         // map units with the list of solutions that need to be reviewed.
         return {
             unit: unit,
-            solutions: unit.solutions.filter(solution => solution.reviewed === 'pending')
+            solutions: unit.solutions.filter(solution => (solution.reviewed === 'pending' && solution.user_id !== chatId))
         }
     });
     if (reviewSolutions.length > 0) {
@@ -346,20 +346,39 @@ const executeState = (chatId, msg) => {
             executeState(chatId, msg)
             break;
         case 'review_init': // sending data from unit
-            fetchUnitsForTask(task).then(units => {
+            fetchUnitsForTask(task, chatId).then(units => {
                 const reviewUnit = getReviewUnit(units)
                 if(reviewUnit !== null) {
+                    // Doesn't really follow DRY principle.
+                    const taskFields = task.content_definition.content_fields;
+                    let fields = [];
+                    Object.keys(taskFields).forEach(function (key) {
+                        if (taskFields.hasOwnProperty(key)) {
+                            var value = taskFields[key];
+                            fields.push(value.substr(value.lastIndexOf(".") + 1));
+                        }
+                    });
+
+                    // process all unit content
                     switch (task.content_definition.content_type) {
                         case 'IMAGE_LIST':
-                            Object.keys(reviewUnit.unit.content).forEach(function (key) {
-                                bot.sendPhoto(chatId, reviewUnit.unit.content[key], {});
+                            //send all declared unit contents
+                            Object.keys(unit.content).forEach(function (key) {
+                                if(fields.indexOf(key) !== -1) {
+                                    bot.sendPhoto(chatId, unit.content[key], {});
+                                }
                             });
                             break;
                         case 'TEXT_LIST':
-                            Object.keys(reviewUnit.unit.content).forEach(function (key) {
-                                bot.sendMessage(chatId, reviewUnit.unit.content[key], {});
+                            //send all declared unit contents
+                            Object.keys(unit.content).forEach(function (key) {
+                                if(fields.indexOf(key) !== -1) {
+                                    bot.sendMessage(chatId, '<b>' + unit.content[key] + '</b>', {parse_mode: 'HTML'});
+                                }
                             });
                             break;
+                        default:
+                            bot.sendMessage(chatId, "Please perform the following task");
                     }
                     initQuestionCounter(chatId);
                     setUnit(chatId, reviewUnit.unit)
@@ -386,40 +405,40 @@ const executeState = (chatId, msg) => {
                 initQuestionCounter(chatId);
                 setUnit(chatId, unit);
 
-                    //find all unit fields that are declared in the task
-                    const taskFields = task.content_definition.content_fields;
-                    let fields = [];
-                    Object.keys(taskFields).forEach(function (key) {
-                        if (taskFields.hasOwnProperty(key)) {
-                            var value = taskFields[key];
-                            fields.push(value.substr(value.lastIndexOf(".") + 1));
-                        }
-                    });
-
-                    // process all unit content
-                    switch (task.content_definition.content_type) {
-                        case 'IMAGE_LIST':
-                            //send all declared unit contents
-                            Object.keys(unit.content).forEach(function (key) {
-                                if(fields.indexOf(key) !== -1) {
-                                    bot.sendPhoto(chatId, unit.content[key], {});
-                                }
-                            });
-                            break;
-                        case 'TEXT_LIST':
-                            //send all declared unit contents
-                            Object.keys(unit.content).forEach(function (key) {
-                                if(fields.indexOf(key) !== -1) {
-                                    bot.sendMessage(chatId, unit.content[key], {});
-                                }
-                            });
-                            break;
-                        default:
-                            bot.sendMessage(chatId, "Please perform the following task");
+                //find all unit fields that are declared in the task
+                const taskFields = task.content_definition.content_fields;
+                let fields = [];
+                Object.keys(taskFields).forEach(function (key) {
+                    if (taskFields.hasOwnProperty(key)) {
+                        var value = taskFields[key];
+                        fields.push(value.substr(value.lastIndexOf(".") + 1));
                     }
+                });
 
-                    setState(chatId, 'task_ask_question');
-                    executeState(chatId, msg);
+                // process all unit content
+                switch (task.content_definition.content_type) {
+                    case 'IMAGE_LIST':
+                        //send all declared unit contents
+                        Object.keys(unit.content).forEach(function (key) {
+                            if(fields.indexOf(key) !== -1) {
+                                bot.sendPhoto(chatId, unit.content[key], {});
+                            }
+                        });
+                        break;
+                    case 'TEXT_LIST':
+                        //send all declared unit contents
+                        Object.keys(unit.content).forEach(function (key) {
+                            if(fields.indexOf(key) !== -1) {
+                                bot.sendMessage(chatId, '<b>' + unit.content[key] + '</b>', {parse_mode: 'HTML'});
+                            }
+                        });
+                        break;
+                    default:
+                        bot.sendMessage(chatId, "Please perform the following task");
+                }
+
+                setState(chatId, 'task_ask_question');
+                executeState(chatId, msg);
                 }
             })
             break;
@@ -546,11 +565,11 @@ const executeState = (chatId, msg) => {
                 bot.sendMessage(chatId, "The review is complete!");
 
                 clearTemporaryData(chatId)
-                setState(chatId, 'task_info');
+                setState(chatId, 'init');
                 executeState(chatId, msg);
             }).catch(err => {
                 bot.sendMessage(chatId, 'Something went wrong..')
-                setState(chatId, 'task_info');
+                setState(chatId, 'init');
                 executeState(chatId, msg);
             });
             break;
@@ -564,7 +583,7 @@ const executeState = (chatId, msg) => {
 
 
                 //serve a new unit of same task
-                setState(chatId, 'task_info');
+                setState(chatId, 'init');
                 executeState(chatId, msg);
             });
             break;
@@ -626,6 +645,10 @@ bot.onText(/\/help/, function (msg) {
     var chatId = msg.chat.id;
     setState(chatId, 'help');
     executeState(chatId, msg);
+});
+
+bot.onText(/\/info/, function (msg) {
+    bot.sendMessage(msg.chat.id, getTask(msg.chat.id).description);
 });
 
 // Matches /quit

@@ -19,9 +19,14 @@ router.route('/')
     // create a task
     .post(function(req, res) {
 
-        var task = new Task(); // create a new instance of the Task model
+        let task = new Task(); // create a new instance of the Task model
         task.name = req.body.name; // set the tasks name (comes from the request)
-
+        task.requester_id = req.body.id;
+        task.description = req.body.description;
+        task.solution_limit = req.body.solution_limit || 5;
+        task.content_definition = req.body.content_definition;
+        task.questions = req.body.questions;
+        task.requires_review = req.body.requires_review;
         task.save(function(err) {
             if (err)
                 res.send(err);
@@ -60,7 +65,13 @@ router.route('/:task_id')
             if (err)
                 res.send(err);
 
-            task.name = req.body.name;
+            task.name = req.body.name; // set the tasks name (comes from the request)
+            task.requester_id = req.body.id;
+            task.description = req.body.description;
+            task.solution_limit = req.body.solution_limit || 5;
+            task.content_definition = req.body.content_definition;
+            task.questions = req.body.questions;
+            task.requires_review = req.body.requires_review;
             task.save(function(err) {
                 if (err)
                     res.send(err);
