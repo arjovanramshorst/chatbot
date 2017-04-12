@@ -23,7 +23,7 @@ The max amount of solutions a single unit may get.
 Content that is used in the task can be described here. 
 
     {
-        content_type: String (IMAGE/TWEET)
+        content_type: enum('TEXT_LIST', 'IMAGE_LIST')
         content_fields: Object
     }
     
@@ -33,7 +33,7 @@ An array containing the questions (in the order they should be asked) as objects
     [{
         question: String,
         response_definition: {
-            response_type: String,
+            response_type: enum('NUMBER', 'FREE_TEXT', 'SELECT', 'IMAGE'),
             response_select_options: [String], (Optional, only if response_type == SELECT)
     }]
     

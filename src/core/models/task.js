@@ -24,8 +24,8 @@ const TaskSchema = new Schema({
         content_type: {
             type: String,
             required: true,
-            enum: ['IMAGE', 'TWEET'],
-        }, // IMAGE / TWEET
+            enum: ['IMAGE_LIST', 'TEXT_LIST'],
+        },
         content_fields: {
             type: Object,
             required: true,
