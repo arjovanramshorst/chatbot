@@ -641,7 +641,18 @@ bot.onText(/\/reset/, function (msg) {
 // Matches /help
 bot.onText(/\/help/, function (msg) {
     var chatId = msg.chat.id;
-    if(getState(chatId) === )
+    if (getState(chatId) === 'task_info' || getState(chatId) === 'init' || getState(chatId) === 'task_init' || getState(chatId) === 'task_ask_question' || getState(chatId) === 'task_awaiting_answer') {
+        bot.sendMessage(chatId, getTask(chatId).description, {parse_mode: 'HTML'});
+    } else {
+        bot.sendMessage(chatId, "Bucky makes it possible to do microwork, whether you are on the go or when you have more time. "
+            + "A list of possible types of tasks is presented. If you select one of the types of tasks, then you can complete "
+            + "them in return for a monetary compensation. When you are done, you can simply type '/quit' to end the conversation.");
+        bot.sendMessage(chatId, 'You can always use these commands as shortcuts: \n' +
+                                    '/reset : to reboot \n' +
+                                    '/choosetask : to choose a (different) task \n' +
+                                    '/help : to get more information \n' +
+                                    '/quit : to stop while doing a task, or to end the conversation');
+    }
 });
 
 // Matches /quit
