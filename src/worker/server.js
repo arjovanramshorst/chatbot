@@ -287,13 +287,11 @@ const executeState = (chatId, msg) => {
     switch (getState(chatId)) {
         case 'new':
             bot.sendMessage(chatId, "Hi there! I am Bucky and we could work together to finish some much needed work.");
-            setState(chatId, 'start');
-            executeState(chatId, msg);
-            break;
-        case 'help':
-            bot.sendMessage(chatId, "Bucky makes it possible to do microwork, whether you are on the go or when you have more time. "
-                + "A list of possible types of tasks is presented. If you select one of the types of tasks, then you can complete "
-                + "them in return for a monetary compensation. When you are done, you can simply type '/quit' to end the conversation.");
+            bot.sendMessage(chatId, 'You can always use these commands as shortcuts: \n' +
+                                    '/reset : to reboot \n' +
+                                    '/choosetask : to choose a (different) task \n' +
+                                    '/help : to get more information \n' +
+                                    '/quit : to stop while doing a task, or to end the conversation');
             setState(chatId, 'start');
             executeState(chatId, msg);
             break;
@@ -331,7 +329,7 @@ const executeState = (chatId, msg) => {
 
             //if a description exists, send it
             if (task && task.description) {
-                bot.sendMessage(chatId, task.description);
+                bot.sendMessage(chatId, task.description, {parse_mode: 'HTML'});
             }
 
             setState(chatId, 'init');
@@ -339,9 +337,9 @@ const executeState = (chatId, msg) => {
             break;
         case 'init':
             if(Math.random() < REVIEW_CHANCE) {
-                setState(chatId, 'review_init')
+                setState(chatId, 'review_init');
             } else {
-                setState(chatId, 'task_init')
+                setState(chatId, 'task_init');
             }
             executeState(chatId, msg)
             break;
@@ -363,17 +361,17 @@ const executeState = (chatId, msg) => {
                     switch (task.content_definition.content_type) {
                         case 'IMAGE_LIST':
                             //send all declared unit contents
-                            Object.keys(unit.content).forEach(function (key) {
+                            Object.keys(reviewUnit.unit.content).forEach(function (key) {
                                 if(fields.indexOf(key) !== -1) {
-                                    bot.sendPhoto(chatId, unit.content[key], {});
+                                    bot.sendPhoto(chatId, reviewUnit.unit.content[key], {});
                                 }
                             });
                             break;
                         case 'TEXT_LIST':
                             //send all declared unit contents
-                            Object.keys(unit.content).forEach(function (key) {
+                            Object.keys(reviewUnit.unit.content).forEach(function (key) {
                                 if(fields.indexOf(key) !== -1) {
-                                    bot.sendMessage(chatId, '<b>' + unit.content[key] + '</b>', {parse_mode: 'HTML'});
+                                    bot.sendMessage(chatId, '<b>' + reviewUnit.unit.content[key] + '</b>', {parse_mode: 'HTML'});
                                 }
                             });
                             break;
@@ -451,13 +449,13 @@ const executeState = (chatId, msg) => {
                         answers.push([option]);
                     });
 
-                    bot.sendMessage(chatId, question.question, {
+                    bot.sendMessage(chatId, '<i>' +question.question + '</i>', {
                         reply_markup: JSON.stringify({
                             one_time_keyboard: true,
                             keyboard: answers,
-                            resize_keyboard: true,
-                            parse_mode: "HTML"
-                        })
+                            resize_keyboard: true
+                        }),
+                        parse_mode: 'HTML',
                     });
                     break;
                 case 'FREE_TEXT':
@@ -534,15 +532,21 @@ const executeState = (chatId, msg) => {
             // Show answer
             let solutionUserId = getReviewUserId(chatId)
             const response = getResponseForQuestion(unit, solutionUserId, getQuestionCounter(chatId))
-            const reviewString = 'Regarding the above message, is the following answer correct?\nQ: '+ question.question + '\nA: ' + response
-
+            let reviewString = '<i>Regarding the above message, is the following answer correct?</i>\nQ: '+ question.question + '\nA: '
+            if(question.response_definition.response_type !== 'IMAGE') {
+                reviewString += response;
+            }
             bot.sendMessage(chatId, reviewString, {
                 reply_markup: JSON.stringify({
                     one_time_keyboard: true,
                     keyboard: [['yes'],['no']],
                     resize_keyboard: true
-                })
+                }),
+                parse_mode: 'HTML',
             })
+            if(question.response_definition.response_type === 'IMAGE') {
+                bot.sendPhoto(chatId, response[response.length -1].file_id)
+            }
             setState(chatId, 'task_review_awaiting')
             break
         case 'task_review_awaiting':
@@ -644,8 +648,18 @@ bot.onText(/\/reset/, function (msg) {
 // Matches /help
 bot.onText(/\/help/, function (msg) {
     var chatId = msg.chat.id;
-    setState(chatId, 'help');
-    executeState(chatId, msg);
+    if (getState(chatId) === 'task_info' || getState(chatId) === 'init' || getState(chatId) === 'task_init' || getState(chatId) === 'task_ask_question' || getState(chatId) === 'task_awaiting_answer') {
+        bot.sendMessage(chatId, getTask(chatId).description, {parse_mode: 'HTML'});
+    } else {
+        bot.sendMessage(chatId, "Bucky makes it possible to do microwork, whether you are on the go or when you have more time. "
+            + "A list of possible types of tasks is presented. If you select one of the types of tasks, then you can complete "
+            + "them in return for a monetary compensation. When you are done, you can simply type '/quit' to end the conversation.");
+        bot.sendMessage(chatId, 'You can always use these commands as shortcuts: \n' +
+                                    '/reset : to reboot \n' +
+                                    '/choosetask : to choose a (different) task \n' +
+                                    '/help : to get more information \n' +
+                                    '/quit : to stop while doing a task, or to end the conversation');
+    }
 });
 
 bot.onText(/\/info/, function (msg) {
