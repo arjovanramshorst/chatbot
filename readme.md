@@ -1,5 +1,10 @@
 # Bucky, a generic, chatbot-based microwork platform.
-Bucky is a chatbot specialized in microwork. He can be found on Telegram: just search for `@buck_a_bot` in the Telegram search bar!
+
+![Bucky Avatar](avatar.png)
+
+**Bucky** is a chatbot specialized in microwork. He can be found on [Telegram](https://web.telegram.org/#/im): just search for [@buck_a_bot](https://web.telegram.org/#/im?p=@buck_a_bot) (server might not be running).
+
+To run the chatbot on a personal computer, please read the documentation.
 
 ## Installation
 Go to the `/src` directory and run `npm install`.
