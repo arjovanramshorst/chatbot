@@ -26,17 +26,10 @@ app.use(bodyParser.json());
 // set port
 const port = /*process.env.PORT || */ 3000;
 
-/* ========== TELEGRAM SETUP ============= */
-// replace the value below with the Telegram token you receive from @BotFather
-//const token = '295147674:AAERxZjce89nISZpVfBMbyJDK6FIHE8u1Zw'; //Lizzy, username: @buck_a_bot
-// const token = '334665274:AAHal-GI-g_Os4OiSOQ04D7h1pUY_98Slgo'; //Bjorn, username: @@BuckABot
-// const token = '373349364:AAGPbNZb8tdCBabVGCQMm_vG_UBjAh7_rkY'; //Arjo, username: @bucky_two_bot
-//const token = '361869218:AAEcJhYl42u9FmynLhp1Ti5VKRzlEladmDk'; //Joost, username: @bucky_three_bot
-//
 const localConfig = require('./env')
 
-const token = localConfig.token
-
+/* ========== TELEGRAM SETUP ============= */
+const token = localConfig.token || '295147674:AAERxZjce89nISZpVfBMbyJDK6FIHE8u1Zw';
 // Create a bot that uses 'polling' to fetch new updates
 const bot = new Tgfancy(token, {polling: true, orderedSending: true});
 
@@ -52,10 +45,19 @@ conn.once('open', function () {
     console.log('Connected successfully to MongoDB');
 });
 
-const REVIEW_CHANCE = 0.5
+/* ========== SYTEM CONFIGURATION ============= */
+//chance to receive a review task
+const REVIEW_CHANCE = 0.25
 
-/* ======================= */
+//supported shortcut commands
+const commands = [
+    '/start',
+    '/choosetask',
+    '/help',
+    '/quit'
+];
 
+/* ========== DATA STRUCTURE ============= */
 const stateTracker = {};
 const activeTask = {};
 const activeUnit = {};
@@ -63,13 +65,9 @@ const questionCounter = {};
 const activeTaskAnswers = {};
 const activeReview = {};
 
-const commands = [
-    '/start',
-    '/reset',
-    '/choosetask',
-    '/help',
-    '/quit' // TODO
-];
+
+// DATA STRUCTURE ACCESS FUNCTIONS
+// =============================================================================
 
 const getState = function(chatId) {
     return stateTracker[chatId];
@@ -144,6 +142,9 @@ const clearTemporaryData = function(chatId) {
     clearAnswers(chatId);
     clearQuestionCounter(chatId);
 };
+
+// DATABASE FUNCTIONS
+// =============================================================================
 
 const fetchTasks = (query = {}) => {
     return new Promise((resolve, reject) => {
@@ -260,6 +261,9 @@ const getResponseForQuestion = (unit, reviewedId, questionNumber) => {
     return unit.solutions.find(solution => solution.user_id === reviewedId).responses[questionNumber]
 }
 
+// BOT ROUTES
+// =============================================================================
+
 // Listen for any kind of message. There are different kinds of messages.
 bot.on('message', function (msg) {
     if (commands.indexOf(msg.text) === -1) {
@@ -277,7 +281,74 @@ bot.on('message', function (msg) {
     }
 });
 
+// Matches /start
+bot.onText(/\/start/, function (msg) {
+    var chatId = msg.chat.id;
+    setState(chatId, 'new');
+    executeState(chatId, msg);
+});
 
+// Matches /choosetask
+bot.onText(/\/choosetask/, function (msg) {
+    var chatId = msg.chat.id;
+    setState(chatId, 'start');
+    executeState(chatId, msg);
+});
+
+// Matches /reset
+bot.onText(/\/reset/, function (msg) {
+    var chatId = msg.chat.id;
+    setState(chatId, 'new');
+    bot.sendMessage(chatId, 'I will reboot now!');
+    executeState(chatId, msg);
+});
+
+// Matches /help
+bot.onText(/\/help/, function (msg) {
+    var chatId = msg.chat.id;
+    if (getState(chatId) === 'task_info' || getState(chatId) === 'init' || getState(chatId) === 'task_init' || getState(chatId) === 'task_ask_question' || getState(chatId) === 'task_awaiting_answer') {
+        bot.sendMessage(chatId, getTask(chatId).description, {parse_mode: 'HTML'});
+    } else {
+        bot.sendMessage(chatId, "Bucky makes it possible to do microwork, whether you are on the go or when you have more time. "
+            + "A list of possible types of tasks is presented. If you select one of the types of tasks, then you can complete "
+            + "them in return for a monetary compensation. When you are done, you can simply type '/quit' to end the conversation.");
+        bot.sendMessage(chatId, 'You can always use these commands as shortcuts: \n' +
+                                    '/reset : to reboot \n' +
+                                    '/choosetask : to choose a (different) task \n' +
+                                    '/help : to get more information \n' +
+                                    '/quit : to stop while doing a task, or to end the conversation');
+    }
+});
+
+bot.onText(/\/info/, function (msg) {
+    bot.sendMessage(msg.chat.id, getTask(msg.chat.id).description);
+});
+
+// Matches /quit
+bot.onText(/\/quit/, function (msg) {
+    var chatId = msg.chat.id;
+
+    //if busy with a task, first ask for confirmation
+    if (getState(chatId) === 'task_init' || getState(chatId) === 'task_ask_question' || getState(chatId) === 'task_awaiting_answer' || getState(chatId) === 'task_complete') {
+        bot.sendMessage(chatId, "Are you sure you want to quit now during your task?", {
+            reply_markup: JSON.stringify({
+                one_time_keyboard: true,
+                keyboard: [
+                   ['yes, i want to quit'],
+                   ['no, i want to continue with the task']
+                ],
+                resize_keyboard: true
+            })
+        });
+        setState(chatId, 'quit_task');
+    } else {
+        setState(chatId, 'quit_chat');
+        executeState(chatId, msg);
+    }
+});
+
+// STATE BEHAVIOR FUNCTION
+// =============================================================================
 const executeState = (chatId, msg) => {
     console.log("\nState for " + chatId + " is: " + getState(chatId));
     const task = getTask(chatId)
@@ -623,72 +694,6 @@ const executeState = (chatId, msg) => {
     }
 };
 
-// Matches /start
-bot.onText(/\/start/, function (msg) {
-    var chatId = msg.chat.id;
-    setState(chatId, 'new');
-    executeState(chatId, msg);
-});
-
-// Matches /choosetask
-bot.onText(/\/choosetask/, function (msg) {
-    var chatId = msg.chat.id;
-    setState(chatId, 'start');
-    executeState(chatId, msg);
-});
-
-// Matches /reset
-bot.onText(/\/reset/, function (msg) {
-    var chatId = msg.chat.id;
-    setState(chatId, 'new');
-    bot.sendMessage(chatId, 'I will reboot now!');
-    executeState(chatId, msg);
-});
-
-// Matches /help
-bot.onText(/\/help/, function (msg) {
-    var chatId = msg.chat.id;
-    if (getState(chatId) === 'task_info' || getState(chatId) === 'init' || getState(chatId) === 'task_init' || getState(chatId) === 'task_ask_question' || getState(chatId) === 'task_awaiting_answer') {
-        bot.sendMessage(chatId, getTask(chatId).description, {parse_mode: 'HTML'});
-    } else {
-        bot.sendMessage(chatId, "Bucky makes it possible to do microwork, whether you are on the go or when you have more time. "
-            + "A list of possible types of tasks is presented. If you select one of the types of tasks, then you can complete "
-            + "them in return for a monetary compensation. When you are done, you can simply type '/quit' to end the conversation.");
-        bot.sendMessage(chatId, 'You can always use these commands as shortcuts: \n' +
-                                    '/reset : to reboot \n' +
-                                    '/choosetask : to choose a (different) task \n' +
-                                    '/help : to get more information \n' +
-                                    '/quit : to stop while doing a task, or to end the conversation');
-    }
-});
-
-bot.onText(/\/info/, function (msg) {
-    bot.sendMessage(msg.chat.id, getTask(msg.chat.id).description);
-});
-
-// Matches /quit
-bot.onText(/\/quit/, function (msg) {
-    var chatId = msg.chat.id;
-
-    //if busy with a task, first ask for confirmation
-    if (getState(chatId) === 'task_init' || getState(chatId) === 'task_ask_question' || getState(chatId) === 'task_awaiting_answer' || getState(chatId) === 'task_complete') {
-        bot.sendMessage(chatId, "Are you sure you want to quit now during your task?", {
-            reply_markup: JSON.stringify({
-                one_time_keyboard: true,
-                keyboard: [
-                   ['yes, i want to quit'],
-                   ['no, i want to continue with the task']
-                ],
-                resize_keyboard: true
-            })
-        });
-        setState(chatId, 'quit_task');
-    } else {
-        setState(chatId, 'quit_chat');
-        executeState(chatId, msg);
-    }
-});
-
 // API ROUTES
 // =============================================================================
 
@@ -706,28 +711,6 @@ router.use(function (req, res, next) {
 router.get('/', function (req, res) {
     res.json({message: 'Welcome, worker!'});
 });
-
-// parse a question and respond
-router.get('/communicate/:q', function (req, res) {
-    request.post(
-        'http://localhost:5000/parse', {json: {q: req.params.q}}, function (error, response, body) {
-            if (error) {
-                console.log(error);
-            }
-            if (!error && response.statusCode === 200) {
-                // console.log(body);
-                // console.log(response);
-                res.json({
-                    message: 'Received a message!',
-                    received_message: body.text,
-                    confidence: body.confidence,
-                    intent: body.intent
-                });
-            }
-        }
-    );
-});
-
 
 // REGISTER ROUTES -------------------------------
 app.use('/api', router);
