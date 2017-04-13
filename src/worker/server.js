@@ -26,10 +26,15 @@ app.use(bodyParser.json());
 // set port
 const port = /*process.env.PORT || */ 3000;
 
-const localConfig = require('./env')
+let localConfig = {}
+try {
+    localConfig = require('./env')
+} catch (err) {
+    console.log('No env.js file found, using default configuration')
+}
 
 /* ========== TELEGRAM SETUP ============= */
-const token = localConfig.token || '295147674:AAERxZjce89nISZpVfBMbyJDK6FIHE8u1Zw';
+const token = localConfig.token || '373349364:AAGPbNZb8tdCBabVGCQMm_vG_UBjAh7_rkY';
 // Create a bot that uses 'polling' to fetch new updates
 const bot = new Tgfancy(token, {polling: true, orderedSending: true});
 
