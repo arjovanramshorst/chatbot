@@ -1,6 +1,0 @@
-{
-  "backend": "mitie",
-  "mitie_file": "./total_word_feature_extractor.dat",
-  "path" : "./Models",
-  "data" : "./Data/tryout-26-3.json"
-}
