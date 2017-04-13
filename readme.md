@@ -1,4 +1,4 @@
-# Bucky, the Chatbot of Microwork.
+# Bucky, a generic, chatbot-based microwork platform.
 Bucky is a chatbot specialized in microwork. He can be found on Telegram: just search for `@buck_a_bot` in the Telegram search bar!
 
 ## Installation
