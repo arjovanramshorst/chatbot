@@ -1,6 +1,6 @@
 # Using the pipelines
 
-In this section we describe how to run the different pipelines for the different tasks. Please note that all tasks assume that certain users have created the three standard tasks which are seeded (after first running `docker-compose up`) by navigating your browser to localhost:3333/seed/reset-and-seed to fill the database with these tasks.
+In this section we describe how to run the different pipelines for the different tasks. Please note that all tasks assume that certain users have created the three standard tasks which are seeded (after first running `docker-compose up`) by navigating your browser to http://localhost:3333/seed/reset-and-seed to fill the database with these tasks.
 
 ## Twitter pipelines
 
